@@ -303,7 +303,8 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
         <li><span>2〜4人で遊びます。全員<b>100コイン</b>でスタート。全<b>10ラウンド</b>で、出てくる順番は最初から全部見えます。</span></li>
         <li><span>毎ラウンド、いくら出すかを<b>こっそり</b>決めて入札します。全員が入札したら<b>いっせいに公開</b>。</span></li>
         <li><span>お宝は<b>一番多く出した人</b>がゲット。★の数がポイントです。</span></li>
-        <li><span><b>金貨のふくろ</b>は一番多く出した人が<b>+25コイン</b>。<b>呪いの仮面</b>はババ抜きで、一番<b>少なく</b>出した人に押し付けられ、<b>最後に持っていた1人だけ −★3</b>。</span></li>
+        <li><span><b>金貨のふくろ</b>は一番多く出した人が<b>+25コイン</b>。<b>呪いの仮面</b>はババ抜きで、一番<b>少なく</b>出した人に押し付けられ、<b>最後に持っていた1人だけ −★3</b>。だれが持っているかは本人にしか分かりません。</span></li>
+        <li><span>試合中は<b>ほかの人の★とコインは見えません</b>。だれが何を取ったかは見えます。最後の結果発表で全部明かされます。</span></li>
         <li><span><b>シークレットカード</b>は中身が★0〜★8のどれか分からず、入札額もだれが落札したかも<b>最後に発表</b>されるまでひみつです。</span></li>
         <li><span>出したコインは<b>勝っても負けても戻りません</b>。捨てるラウンドを作るのも作戦です。</span></li>
         <li><span>お宝で1位が同額なら、<b>次のお宝に上乗せ</b>されます。</span></li>
@@ -348,7 +349,7 @@ const CURSE=-2,BAG=90,BAGCOINS=25,MASK=3;  // treasure codes: 1..5 = stars, -2 =
 const SECRET=80,SECRET_VALUES=[0,1,2,3,4,6,8];
 const DECK=[1,2,3,3,4,5,BAG,SECRET,CURSE,CURSE];
 const EV={1:{name:'臨時収入',desc:'ラウンドの最初に全員 +15コイン'},2:{name:'ダブル',desc:'このラウンドのお宝・金貨が2倍'},
-  3:{name:'おつり',desc:'お宝を取れなかった人は、出したコインの半分が戻る'},4:{name:'ビリ救済',desc:'ラウンドの最初に★が一番少ない人へ +20コイン'}};
+  3:{name:'おつり',desc:'お宝を取れなかった人は、出したコインの半分が戻る'},4:{name:'パスでお小づかい',desc:'このラウンドに0コインで入札した人は +10コイン'}};
 const COLORS=[['#ff8a5b','#c65c31','#2b0f04'],['#7fb7ff','#4677c4','#071a36'],['#66e3a4','#2f9e6c','#03281a'],['#c59bff','#8a5fd0','#1d0838']];
 const BOTNAMES=['CPUアカ','CPUアオ','CPUミドリ'];
 function rid(){return Math.random().toString(36).slice(2,10);}
@@ -427,13 +428,16 @@ function step(ctx){
 }
 /* secret card: bids and the winner of that round stay hidden until the game ends */
 function secretRounds(cfg){const a=[];(cfg.treasures||[]).forEach((t,i)=>{if(t===SECRET)a.push(i);});return a;}
-function maskFor(ps,viewer,cfg){const sr=secretRounds(cfg);if(!sr.length)return ps;
+function hiddenRounds(cfg){const a=[];(cfg.treasures||[]).forEach((t,i)=>{if(t===SECRET||t===CURSE)a.push(i);});return a;}
+function maskFor(ps,viewer,cfg){const sr=hiddenRounds(cfg);if(!sr.length)return ps;
   return ps.map(p=>{if(p.pid===viewer)return p;const rv=p.reveals.slice();sr.forEach(r=>{if(rv[r])rv[r]={h:1};});return Object.assign({},p,{reveals:rv});});}
-function secFor(full,pid){const o={};if(!full)return o;full.rounds.forEach(x=>{if(x.kind==='secret')o[x.r]=x.winner===pid?{win:true,v:x.pot}:{win:false};});return o;}
+function secFor(full,pid){const o={};if(!full)return o;full.rounds.forEach(x=>{
+  if(x.kind==='secret')o[x.r]=x.winner===pid?{win:true,v:x.pot}:{win:false};
+  else if(x.kind==='curse')o[x.r]={win:false,mask:x.holder===pid};});return o;}
 function deriveFull(){return S&&S.host&&S.cfg&&S.cfg.started?core(C,view(C),null,S.secv||{}):null;}
 function derive(ctx){
   const S=ctx.S,cfg=ctxCfg(ctx);if(!cfg||!cfg.started)return null;
-  if(S.host){const full=core(ctx,view(ctx),null,S.secv||{});if(full.done||!secretRounds(cfg).length)return full;
+  if(S.host){const full=core(ctx,view(ctx),null,S.secv||{});if(full.done||!hiddenRounds(cfg).length)return full;
     return core(ctx,maskFor(view(ctx),S.pid,cfg),secFor(full,S.pid),{});}
   return core(ctx,view(ctx),ctx.room.sec||{},ctx.room.secv||{});
 }
@@ -445,7 +449,6 @@ function core(ctx,ps,sec,secv){
     const ev=evAt(cfg,r),active=seats.filter(id=>!isDropped(cfg,id,r));gifts={};
     // start-of-round bonus events (applied before bidding, so the coins can be spent this round)
     if(ev===1)active.forEach(id=>{st[id].pts+=15;gifts[id]=15;});
-    if(ev===4&&active.length){const mn=Math.min(...active.map(id=>st[id].stars));active.filter(id=>st[id].stars===mn).forEach(id=>{st[id].pts+=20;gifts[id]=20;});}
     cur=r;
     const bids={},bad={};let ok=true,hidden=false;
     for(const id of seats){if(isDropped(cfg,id,r)){bids[id]=0;continue;}
@@ -463,11 +466,14 @@ function core(ctx,ps,sec,secv){
     if(t===SECRET){kind='secret';
       if(hidden){const info=sec[r];if(info.win){winner=S.pid;pot=info.v|0;st[S.pid].stars+=pot;}else pot=null;}
       else{pot=secv[r]|0;top=active.filter(id=>bids[id]===max);if(top.length===1){winner=top[0];st[winner].stars+=pot;}}}
-    else if(t===CURSE){kind='curse';pot=0;losers=active.filter(id=>bids[id]===min);
-      if(losers.length)holder=losers.slice().sort((a,b)=>st[b].stars-st[a].stars||seats.indexOf(a)-seats.indexOf(b))[0];}
+    else if(t===CURSE){kind='curse';pot=0;
+      if(hidden)holder=sec[r].mask?S.pid:'?';   // only the holder knows; everyone else sees "someone"
+      else{losers=active.filter(id=>bids[id]===min);
+        if(losers.length)holder=losers.slice().sort((a,b)=>st[b].stars-st[a].stars||seats.indexOf(a)-seats.indexOf(b))[0];}}
     else if(t===BAG){kind='bag';pot=BAGCOINS*mult;top=active.filter(id=>bids[id]===max);if(top.length===1){winner=top[0];st[winner].pts+=pot;}}
     else{kind='star';pot=(t+carry)*mult;top=active.filter(id=>bids[id]===max);if(top.length===1){winner=top[0];st[winner].stars+=pot;carry=0;}else carry=pot;}
     const refund={};if(ev===3)active.forEach(id=>{if(id!==winner){const b=Math.floor(bids[id]/2);if(b){st[id].pts+=b;refund[id]=b;}}});
+    if(ev===4)active.forEach(id=>{if(bids[id]===0){st[id].pts+=10;refund[id]=10;}});
     rounds.push({r,bids,winner,top,losers,pot,max,min,bad,kind,ev,gifts,refund,from,holder,hidden});
     cur=r+1;gifts={};
   }
@@ -499,13 +505,13 @@ function hubOffline(pid,conn){const e=hub.peers.get(pid);if(!e||(conn&&e.conn!==
 function hostRoom(){ROOM.players=[...hub.peers.values()].sort((a,b)=>a.order-b.order).map(e=>Object.assign({},e.pres,{on:e.on}));ROOM.cfg=S.cfg;}
 function hostUpdate(){if(!S||!S.host)return;hostRoom();step(C);view(C).forEach(ensureVerify);if(maybeRematch()){hostRoom();step(C);}save();broadcast();render();}
 function broadcast(){if(!S||!S.host)return;hostRoom();
-  const all=view(C),cfg=S.cfg,full=deriveFull(),open=!full||full.done||!secretRounds(cfg).length;
+  const all=view(C),cfg=S.cfg,full=deriveFull(),open=!full||full.done||!hiddenRounds(cfg).length;
   for(const e of hub.peers.values())if(e.on&&e.send){const pid=e.pres.pid;
     const snap={v:3,app:'bid',t:'snap',cfg,players:open?all:maskFor(all,pid,cfg),sec:open?{}:secFor(full,pid),secv:full&&full.done?(S.secv||{}):null};
     try{e.send(snap);}catch(err){}}}
 function startGame(seats){S.cfg=newCfg(S.cfg.game+1,seats);S.game=S.cfg.game;freshGame(S);S.again=-1;
   S.secv={};secretRounds(S.cfg).forEach(r=>{S.secv[r]=SECRET_VALUES[Math.random()*SECRET_VALUES.length|0];});resetView();}
-function cleanSec(o){const r={};if(o&&typeof o==='object')for(const k in o){const x=o[k];if(x&&typeof x==='object')r[k]=x.win?{win:true,v:Number.isInteger(x.v)?x.v:0}:{win:false};}return r;}
+function cleanSec(o){const r={};if(o&&typeof o==='object')for(const k in o){const x=o[k];if(x&&typeof x==='object')r[k]=x.win?{win:true,v:Number.isInteger(x.v)?x.v:0}:{win:false,mask:!!x.mask};}return r;}
 function cleanSecv(o){if(!o||typeof o!=='object')return null;const r={};for(const k in o)if(Number.isInteger(o[k]))r[k]=o[k];return r;}
 function onlinePids(){return view(C).filter(p=>p.on!==false).slice(0,MAXP).map(p=>p.pid);}
 function maybeRematch(){
@@ -668,7 +674,8 @@ function showRules(){const b=$('#rulesBox');
       <li><span>お宝は<b>一番多く出した1人</b>がゲット。★の数がポイントになります。</span></li>
       <li><span><b>金貨のふくろ</b>は一番多く出した人が<b>+25コイン</b>。安く取れればコインが増えます。</span></li>
       <li><span><b>シークレットカード</b>は中身が★0〜★8のどれか分かりません。入札額もだれが落札したかも<b>試合の最後まで公開されず</b>、落札した本人にだけ中身が見えます。ほかの人のコインは「のこり ?（最大○○）」と表示されます。</span></li>
-      <li><span><b>呪いの仮面</b>はババ抜き。<b>一番少なく出した人</b>が仮面を持たされ、次の仮面ラウンドで別の人が最下位になると移ります。<b>試合終了時に持っていた1人だけ −★${MASK}</b>。最下位が同額なら★が多い人が持たされます。</span></li>
+      <li><span><b>呪いの仮面</b>はババ抜き。<b>一番少なく出した人</b>が仮面を持たされ、次の仮面ラウンドで別の人が最下位になると移ります。<b>試合終了時に持っていた1人だけ −★${MASK}</b>。最下位が同額なら★が多い人が持たされます。仮面ラウンドの入札額は公開されず、<b>だれが持っているかは本人にしか分かりません</b>。</span></li>
+      <li><span>試合中は、<b>ほかの人の★とコインは見えません</b>（自分の分だけ入札画面に出ます）。だれが何を取ったかは見えます。全部の数字は最後の結果発表で分かります。</span></li>
       <li><span>出したコインは<b>勝っても負けても戻りません</b>（「おつり」イベントのときだけ半分戻ります）。</span></li>
       <li><span>お宝で1位が同額なら、だれももらえず<b>次のお宝に上乗せ</b>されます。</span></li>
       <li><span>10ラウンド終わったら、<b>★の合計</b>が多い順に順位が決まります。同じなら<b>のこりコイン</b>が多い人が上です。</span></li>
@@ -717,9 +724,10 @@ function renderPlayers(cfg,ps,d){
     else if(d.done)stt='しあい終了';
     else if(p&&p.game===d.cfg.game&&typeof p.commits[d.cur]==='string'){stt='入札ずみ';cls='ok';}
     else stt='考え中…';
-    const chip=mk('div','pchip'+(me?' me':'')+(seated&&d&&lead>0&&d.st[id].stars===lead?' lead':''));
+    const chip=mk('div','pchip'+(me?' me':'')+(seated&&d&&d.done&&lead>0&&d.st[id].stars===lead?' lead':''));
     chip.innerHTML=avatar(id,p?p.nick:'?',cfg,ps,on?'':'off')+`<div class="who"><span class="nm">${esc(p?p.nick:'?')}${me?'<small>あなた</small>':''}</span>`+
-      (seated?`<span class="nums"><span class="st">★合計<b>${d.st[id].stars}</b>${d.st[id].unk&&id!==S.pid?'+?':''}</span><span>${d.st[id].unk&&id!==S.pid?`のこり<b>?</b>（最大${d.st[id].pts}）`:`のこり<b>${d.st[id].pts}</b>`}</span>${d.holder===id?`<span class="mask">${d.done?'仮面 −★'+MASK:'仮面もち'}</span>`:''}</span>`:'')+
+      (seated&&d.done?`<span class="nums"><span class="st">★合計<b>${d.st[id].stars}</b></span><span>のこり<b>${d.st[id].pts}</b></span>${d.holder===id?`<span class="mask">仮面 −★${MASK}</span>`:''}</span>`
+        :seated&&me&&d.holder===S.pid?`<span class="nums"><span class="mask">仮面もち（ひみつ）</span></span>`:'')+
       `<span class="stt ${cls}">${stt}</span></div>`;
     el.appendChild(chip);});
 }
@@ -754,7 +762,7 @@ function renderRail(d){
   const rail=$('#rail');rail.innerHTML='';const T=d.cfg.treasures;
   for(let r=0;r<ROUNDS;r++){const res=d.rounds[r],v=T[r],ev=evAt(d.cfg,r);let cls='slot'+(v===CURSE?' cursed':v===BAG?' bag':''),who='これから';
     if(res){cls+=' done';
-      if(res.kind==='curse')who='仮面→'+nameOf(res.holder,d.by);
+      if(res.kind==='curse')who=res.hidden?(res.holder===S.pid?'仮面→あなた':res.from===S.pid?'押し付けた！':'仮面→ひみつ'):'仮面→'+nameOf(res.holder,d.by);
       else if(res.kind==='secret'&&res.hidden)who=res.winner===S.pid?`あなた（★${res.pot}）`:'ひみつ';
       else if(res.kind==='secret'&&res.winner)who=`${nameOf(res.winner,d.by)}（★${res.pot}）`;
       else if(res.winner)who=nameOf(res.winner,d.by);
@@ -762,7 +770,7 @@ function renderRail(d){
     else if(r===d.cur&&!d.done){cls+=' cur';who=d.carry&&v>0&&v!==BAG?`今回 +${d.carry}`:'今回';}
     const t=TR[v]||{name:'お宝',rar:'',c:'#fff'};
     const el=mk('div',cls);el.innerHTML=`<span class="rn">ラウンド${r+1}</span>${ev?`<span class="evb">${EV[ev].name}</span>`:''}<span class="gem">${gem(v)}<b>${gemLabel(v)}</b></span><span class="tn">${t.name}</span><span class="rr" style="color:${t.c}">${t.rar}・${valText(v)}</span><span class="who">${esc(who)}</span>`;
-    const tint=res&&(res.winner||(res.kind==='curse'?res.holder:null));
+    const tint=res&&(res.winner||(res.kind==='curse'&&res.holder!=='?'?res.holder:null));
     if(tint){const c=COLORS[colorIdx(tint,d.cfg,[])];el.querySelector('.who').style.cssText=`background:${c[0]};color:${c[2]}`;}
     rail.appendChild(el);}
 }
@@ -779,7 +787,7 @@ function renderBid(d,ps){
   if(!S.host&&hostDown){const n=mk('div','notice');n.innerHTML='<span>部屋をつくった人の接続が切れました。再接続を待っています…</span>';c.appendChild(n);}
   if(d.done){c.insertAdjacentHTML('beforeend',`<div class="waitbox"><span class="big">しあい終了！</span></div>`);return;}
   const tv=cfg.treasures[r],mult=d.ev===2?2:1;
-  const potTxt=d.kind==='secret'?'★?<small>（★0〜★8のどれか）</small>':d.kind==='curse'?(d.holder?`<small>いま仮面を持っているのは</small>${esc(nameOf(d.holder,d.by))}`:'<small>仮面はまだだれも持っていない</small>'):d.kind==='bag'?`+${d.pot}<small>コイン</small>`:`★${d.pot}`+(d.carry||mult>1?`<small>（★${tv}${d.carry?`＋持ち越し★${d.carry}`:''}${mult>1?' ×2':''}）</small>`:'<small>ポイント</small>');
+  const potTxt=d.kind==='secret'?'★?<small>（★0〜★8のどれか）</small>':d.kind==='curse'?(d.holder===S.pid?'<small>いま仮面を持っているのは</small>あなた':d.holder?'<small>仮面はだれかが持っている（ひみつ）</small>':'<small>仮面はまだだれも持っていない</small>'):d.kind==='bag'?`+${d.pot}<small>コイン</small>`:`★${d.pot}`+(d.carry||mult>1?`<small>（★${tv}${d.carry?`＋持ち越し★${d.carry}`:''}${mult>1?' ×2':''}）</small>`:'<small>ポイント</small>');
   const strip=d.kind==='secret'?`<span>一番多く出した<b>1人</b>がゲット</span><span>中身は<b>落札した人だけ</b>に見える</span><span>入札額もだれが取ったかも<b>最後までひみつ</b></span>`
     :d.kind==='curse'?`<span>一番<b>少なく</b>出した人に<b>仮面が移る</b></span><span>試合終了時に持っていた人だけ<b>−★${MASK}</b></span><span>最下位が同額なら<b>★が多い人</b>へ</span>`
     :d.kind==='bag'?`<span>一番多く出した<b>1人</b>が<b>+${d.pot}コイン</b></span><span>安く取れれば<b>コインが増える</b></span><span>1位が同額なら<b>だれも取れない</b></span>`
@@ -791,7 +799,7 @@ function renderBid(d,ps){
     if(isDropped(cfg,id,r))return `<span class="ostate off"><span class="d"></span>${nm}：抜けた</span>`;
     if(!(p&&p.on!==false))return `<span class="ostate off"><span class="d"></span>${nm}：接続待ち</span>`;
     if(p.game===cfg.game&&typeof p.commits[r]==='string')return `<span class="ostate locked"><span class="d"></span>${nm}：入札ずみ</span>`;
-    return `<span class="ostate"><span class="d"></span>${nm}：考え中（${d.st[id].pts}）</span>`;}).join('')+'</div>';
+    return `<span class="ostate"><span class="d"></span>${nm}：考え中</span>`;}).join('')+'</div>';
   if(!seated){c.insertAdjacentHTML('beforeend',pot+`<div class="waitbox"><div class="coinspin"></div><span class="big">観戦中</span><span class="muted">${cfg.seats.includes(S.pid)?'このしあいからは抜けた扱いです。':'次のしあいから参加できます。'}</span></div>`+othersHtml());return;}
   const max=d.st[S.pid].pts;
   if(S.commits[r]){const mine=S.mine[r]?S.mine[r].v:'?';
@@ -799,7 +807,7 @@ function renderBid(d,ps){
     c.insertAdjacentHTML('beforeend',pot+`<div class="waitbox"><div class="coinspin"></div><span class="big">${waiting.length?`あと${waiting.length}人の入札待ち`:'公開します…'}</span><span class="muted">あなたの入札：<b style="color:var(--cream)">${mine}</b> コイン</span></div>`+othersHtml());return;}
   if(bidRound!==r){bidRound=r;setBid(d.kind==='curse'?Math.min(max,3):d.kind==='bag'?Math.min(max,Math.round(d.pot*.4)):Math.min(max,Math.round(max*d.pot/Math.max(1,d.remain))),max);}
   if(bidVal>max)bidVal=max;
-  c.insertAdjacentHTML('beforeend',pot+`<div class="dial"><span class="amt" id="amt">${bidVal}</span><span class="unit">コイン</span><span class="left" id="leftc"></span></div>
+  c.insertAdjacentHTML('beforeend',pot+`<div class="dial"><span class="amt" id="amt">${bidVal}</span><span class="unit">コイン</span><span class="left" id="leftc"></span><span class="left">あなたの★合計 ${d.st[S.pid].stars}${d.holder===S.pid?'・仮面もち':''}（ほかの人には見えません）</span></div>
     <input type="range" id="slider" min="0" max="${max}" step="1" value="${bidVal}" aria-label="入札するコイン">
     <div class="steppers"><button class="btn" data-d="-10">−10</button><button class="btn" data-d="-1">−1</button><button class="btn" data-d="1">+1</button><button class="btn" data-d="10">+10</button></div>
     <div class="chips"><button class="btn sm" data-q="0">0</button><button class="btn sm" data-q="0.25">¼</button><button class="btn sm" data-q="0.5">半分</button><button class="btn sm" data-q="1">ぜんぶ</button></div>
@@ -818,12 +826,13 @@ function renderHist(d){
   else d.rounds.slice().reverse().forEach(x=>{const li=mk('li');
     const bids=d.seats.map(id=>`${esc(nameOf(id,d.by))} <b>${isDropped(d.cfg,id,x.r)?'—':x.bids[id]}</b>${x.bad[id]?'⚠':''}`).join('・');
     const nm=id=>esc(nameOf(id,d.by))+(id===S.pid?'':'さん');
+    if(x.kind==='curse'&&x.hidden){li.innerHTML=`<span class="r">R${x.r+1}</span><span class="res">呪いの仮面 → ${x.holder===S.pid?(x.from===S.pid?'あなたのまま…':'あなたに来た…'):x.from===S.pid?'押し付けた！':'だれか（ひみつ）'}</span><span class="bids">あなた <b>${x.bids[S.pid]!=null?x.bids[S.pid]:'—'}</b>・ほかの人はひみつ</span>`;ul.appendChild(li);return;}
     if(x.kind==='secret'&&x.hidden){li.innerHTML=`<span class="r">R${x.r+1}</span><span class="res">シークレット → ${x.winner===S.pid?`あなたがゲット（中身は★${x.pot}）`:'？（最後に発表）'}</span><span class="bids">あなた <b>${x.bids[S.pid]!=null?x.bids[S.pid]:'—'}</b>・ほかの人はひみつ</span>`;ul.appendChild(li);return;}
     const res=x.kind==='secret'?`シークレット★${x.pot} → ${x.winner?nm(x.winner)+'がゲット':'同額でだれも取れず'}`:x.kind==='curse'?`呪いの仮面 → ${x.holder?nm(x.holder):'だれも'}${x.from&&x.from!==x.holder?`（${nm(x.from)}から移った）`:''}`:x.kind==='bag'?`金貨+${x.pot} → ${x.winner?nm(x.winner)+'がゲット':'だれも取れず'}`
       :`★${x.pot} → ${x.winner?nm(x.winner)+'がゲット':'同額で持ち越し'}`;
     li.innerHTML=`<span class="r">R${x.r+1}</span><span class="res">${res}${x.ev?`<small style="color:var(--gold)">（${EV[x.ev].name}）</small>`:''}</span><span class="bids">${bids}</span>`;ul.appendChild(li);});
   if(!d.done){const rich=d.seats.filter(id=>!isDropped(d.cfg,id,d.cur)).sort((a,b)=>d.st[b].pts-d.st[a].pts)[0];
-    $('#tip').textContent=`のこりのお宝は★${d.remain}ぶん。いちばんコインが多いのは${nameOf(rich,d.by)}${rich===S.pid?'':'さん'}（${d.st[rich].pts}）です。`;}
+    void rich;$('#tip').textContent='試合中は、ほかの人の★とコインは見えません。最後の結果発表をお楽しみに。';}
   else $('#tip').textContent='';
 }
 function handleReveal(d){
@@ -846,6 +855,15 @@ function handleReveal(d){
   if(x.kind==='secret'){good=x.winner===S.pid;vcls=x.winner?(good?'me':'op'):'tie';
     verdict=x.winner?(good?`シークレット ★${x.pot} ゲット！`:`${nm(x.winner)}がシークレット ★${x.pot}`):'同額で並んだ！';
     sub=x.winner?`${x.max} コインで落札`:`${x.max} コインで${x.top.length}人が並んだので、だれも取れませんでした`;}
+  else if(x.kind==='curse'&&x.hidden){const hit=x.holder===S.pid,passed=x.from===S.pid&&!hit;good=!hit;vcls=hit?'op':passed?'me':'tie';
+    verdict=hit?(x.from===S.pid?'仮面はあなたのまま…':'仮面を押し付けられた…'):passed?'仮面を押し付けた！':'仮面はあなたには来なかった';
+    sub=hit?'あなたが持っていることは、ほかの人にはひみつです。次の仮面ラウンドで押し付け返そう。':'だれが持っているかはひみつ。試合の最後に発表されます。';
+    const mineCard=`<div class="bcard${hit?' cursed':''}" style="--pc:${COLORS[colorIdx(S.pid,d.cfg,[])][0]}"><div class="in"><div class="b"></div><div class="f"><span class="w">あなた</span><span class="n">${x.bids[S.pid]!=null?x.bids[S.pid]:'—'}</span></div></div></div>`;
+    rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}：呪いの仮面（押し付け合い）</span><div class="cards" style="--n:1">${mineCard}</div>
+      <div class="verdict ${vcls}">${verdict}</div><span class="sub">${sub}</span><span class="sub" style="font-size:12px">タップで閉じる</span></div>`;
+    rv.hidden=false;SFX.flip();setTimeout(()=>{(hit?SFX.lose:passed?SFX.coin:SFX.tie)();},900);
+    clearTimeout(rvTimer);rvTimer=setTimeout(()=>{rv.hidden=true;render();},3400);rv.onclick=()=>{clearTimeout(rvTimer);rv.hidden=true;render();};
+    if(d.done)endOpenAt=Date.now()+3500;return;}
   else if(x.kind==='curse'){const hit=x.holder===S.pid,passed=x.from===S.pid&&!hit;good=!hit;vcls=hit?'op':'me';
     verdict=hit?(x.from===S.pid?'仮面はあなたのまま…':'仮面を押し付けられた…'):passed?`仮面を${nm(x.holder)}に押し付けた！`:`仮面が${nm(x.holder)}に移った！`;
     sub=`一番少ない ${x.min} コイン${x.losers.length>1?`で${x.losers.length}人が並び、★が多い人`:'の人'}が持たされました。試合終了時に持っていたら −★${MASK}`;}
@@ -855,7 +873,7 @@ function handleReveal(d){
   else{good=x.winner===S.pid;vcls=x.winner?(good?'me':'op'):'tie';
     verdict=x.winner?(good?`★${x.pot} ゲット！`:`${nm(x.winner)}が★${x.pot} ゲット`):'同額で並んだ！';
     sub=x.winner?`${x.max} コインで落札`:`${x.max} コインで${x.top.length}人が並んだので、★${x.pot} は次のお宝に持ち越し`;}
-  const refundMine=x.refund&&x.refund[S.pid]?`（おつりで ${x.refund[S.pid]} コイン戻りました）`:'';
+  const refundMine=x.refund&&x.refund[S.pid]?(x.ev===4?`（パスのお小づかい +${x.refund[S.pid]} コイン）`:`（おつりで ${x.refund[S.pid]} コイン戻りました）`):'';
   const anyBad=Object.keys(x.bad).length?'（⚠ 入札が途中で変わった可能性がある人がいます）':'';
   rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}：${trName(d.cfg.treasures[x.r])}　${x.kind==='curse'?'押し付け合い':x.kind==='bag'?'+'+x.pot+'コイン':'★'+x.pot}${x.ev?`　<span style="color:var(--gold)">${EV[x.ev].name}</span>`:''}</span><div class="cards${n>2?' many':''}" style="--n:${n}">${cards}</div>
     <div class="verdict ${vcls}">${verdict}</div><span class="sub">${sub}${refundMine}${anyBad}</span><span class="sub" style="font-size:12px">タップで閉じる</span></div>`;
