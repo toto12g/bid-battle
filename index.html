@@ -139,6 +139,28 @@ input#code{font-family:var(--f-disp);font-weight:400;font-size:28px;text-align:c
 .slot.cur{border-color:var(--gold);background:linear-gradient(var(--gold-soft),var(--gold-soft)),var(--panel);transform:translateY(-3px)}
 .slot.cur .who{background:var(--gold);color:#2b1e00}
 .slot.done.tie{opacity:.6}
+.railhead{display:flex;justify-content:space-between;align-items:baseline;gap:4px 14px;flex-wrap:wrap;margin-bottom:8px}
+.railhead h2{font-size:17px}
+.railhead p{font-size:13px;color:var(--muted)}
+.railhead p b{color:var(--gold)}
+.slot .tn{font-size:11px;font-weight:800;line-height:1.25;min-height:2.5em;display:grid;place-items:center;text-wrap:balance}
+.slot .rr{font-size:10px;font-weight:800;letter-spacing:.04em}
+.rulestrip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.rulestrip span{background:var(--felt2);border-radius:10px;padding:6px 9px;font-size:12px;line-height:1.4;color:var(--muted)}
+.rulestrip b{color:var(--cream)}
+@media (max-width:480px){.rulestrip{grid-template-columns:1fr}}
+.rarity{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px;margin-top:6px}
+.rarity td{background:var(--felt2);padding:6px 10px}
+.rarity td:first-child{border-radius:10px 0 0 10px;width:44px}
+.rarity td:last-child{border-radius:0 10px 10px 0;text-align:right;font-family:var(--f-disp);color:var(--gold);white-space:nowrap}
+.rarity .g{width:30px;height:30px;position:relative;display:grid;place-items:center}
+.rarity .g svg{position:absolute;inset:0;width:100%;height:100%}
+.rarity .g b{position:relative;font-family:var(--f-disp);font-weight:400;font-size:12px;color:#2a2000}
+.rarity small{display:block;font-size:11px;font-weight:800}
+.rulesbox{max-width:520px;text-align:left}
+.rulesbox h3{font-family:var(--f-disp);font-weight:400;font-size:16px;color:var(--gold);margin:18px 0 4px}
+.rulesbox .steps{margin-top:10px}
+.rulesbox .ttl{font-family:var(--f-title);font-size:34px;color:var(--gold);text-align:center;margin-bottom:6px}
 
 /* bid panel */
 .playgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
@@ -275,16 +297,20 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
         <li><span>一番多い金額で何人か並んだら、お宝は<b>次のラウンドに上乗せ</b>されます。</span></li>
         <li><span>5ラウンド後、<b>★の合計</b>が多い人の勝ち。同じなら残りコインが多い人が上です。</span></li>
       </ol>
+      <h2 style="margin:20px 0 4px;font-size:16px">お宝とレア度</h2>
+      <p class="muted" style="font-size:13px">★の数がそのお宝のポイントです。毎試合、5つのお宝が1回ずつバラバラの順番で出てきます。</p>
+      <table class="rarity" id="rarityLobby"></table>
     </details>
   </section>
 
   <section id="game" hidden>
-    <div class="topbtns"><button id="leave" class="btn sm">← ロビー</button><button id="mute" class="btn sm" aria-pressed="false">音：オン</button></div>
+    <div class="topbtns"><button id="leave" class="btn sm">← ロビー</button><div style="display:flex;gap:8px"><button id="rulesBtn" class="btn sm gold">ルール</button><button id="mute" class="btn sm" aria-pressed="false">音：オン</button></div></div>
     <div class="roominfo" id="roominfo"></div>
     <div class="players" id="players"></div>
     <div class="card invitecard" id="inviteCard" hidden></div>
     <div class="card waitroom" id="waitRoom" hidden></div>
     <div class="card againbar" id="againBar" hidden></div>
+    <div class="railhead" id="railHead" hidden><h2>お宝（全5ラウンド）</h2><p><b>★の数＝そのお宝のポイント</b>。5ラウンドで集めた★の合計で順位が決まります。</p></div>
     <div class="rail" id="rail" hidden></div>
     <div class="playgrid" id="playgrid" hidden>
       <div class="card" id="bidCard"></div>
@@ -292,6 +318,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
     </div>
   </section>
 </div>
+<div id="rules" class="overlay" hidden><div class="modal rulesbox" id="rulesBox"></div></div>
 <div id="rv" class="overlay" hidden></div>
 <div id="end" class="overlay" hidden><div class="modal" id="endModal"></div></div>
 <canvas id="fx" hidden></canvas>
@@ -543,7 +570,29 @@ async function lockBid(){
 function setBid(v,max){bidVal=Math.max(0,Math.min(max,Math.round(v)));}
 
 /* ---------- render ---------- */
-const GEM='<svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3l15 9v20l-15 9-15-9V12z" fill="#f2c14e" stroke="#b8892a" stroke-width="3" stroke-linejoin="round"/><path d="M22 3v38M7 12l30 20M37 12L7 32" stroke="#fff3c4" stroke-width="1.2" opacity=".55"/></svg>';
+const TR={1:{name:'銅のコイン',rar:'ノーマル',c:'#d39a6a',k:'#8a5a33'},2:{name:'銀のさかずき',rar:'レア',c:'#d9e2e6',k:'#8d9aa1'},
+  3:{name:'金のかんむり',rar:'スーパーレア',c:'#f2c14e',k:'#b8892a'},4:{name:'紅いルビー',rar:'ウルトラレア',c:'#ff6b7f',k:'#b33247'},
+  5:{name:'伝説のダイヤ',rar:'レジェンド',c:'#8fe9ff',k:'#3a9fbd'}};
+function gem(v){const t=TR[v]||TR[3];return `<svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3l15 9v20l-15 9-15-9V12z" fill="${t.c}" stroke="${t.k}" stroke-width="3" stroke-linejoin="round"/><path d="M22 3v38M7 12l30 20M37 12L7 32" stroke="#ffffff" stroke-width="1.2" opacity=".45"/></svg>`;}
+function trName(v){const t=TR[v];return t?`${t.name}（${t.rar}）`:'お宝';}
+function rarityRows(){return [1,2,3,4,5].map(v=>`<tr><td><span class="g">${gem(v)}<b>${v}</b></span></td><td>${TR[v].name}<small style="color:${TR[v].c}">${TR[v].rar}</small></td><td>★${v}</td></tr>`).join('');}
+$('#rarityLobby').innerHTML=rarityRows();
+function showRules(){const b=$('#rulesBox');
+  b.innerHTML=`<div class="ttl">ルール</div>
+    <ol class="steps">
+      <li><span>全員<b>100コイン</b>でスタート。お宝は5つで、<b>1ラウンドに1つずつ</b>入札します。</span></li>
+      <li><span>今のお宝にいくら出すかを<b>こっそり</b>決めて「入札する」。全員そろったら<b>いっせいに公開</b>。</span></li>
+      <li><span><b>一番多く出した1人</b>がそのお宝をゲット。★の数がポイントになります。</span></li>
+      <li><span>出したコインは<b>勝っても負けても戻りません</b>。0コイン入札（今回はパス）もできます。</span></li>
+      <li><span>一番多い金額で<b>2人以上が並んだら、だれももらえず</b>、お宝のポイントは<b>次のラウンドに上乗せ</b>されます。</span></li>
+      <li><span>5ラウンド終わったら、<b>★の合計</b>が多い順に順位が決まります。同じなら<b>のこりコイン</b>が多い人が上です。</span></li>
+    </ol>
+    <h3>お宝とレア度</h3><table class="rarity">${rarityRows()}</table>
+    <h3>作戦のヒント</h3><p class="muted" style="font-size:13px">★の小さいお宝は捨てて、レジェンドに大きく賭けるのもあり。ほかの人の「のこりコイン」は見えるので、相手が出せる最大額も読めます。</p>`;
+  const close=mk('button','btn gold big','わかった！');close.style.marginTop='18px';close.onclick=()=>{$('#rules').hidden=true;};b.appendChild(close);
+  $('#rules').hidden=false;lsSet('bid:rules','1');}
+$('#rulesBtn').onclick=showRules;
+$('#rules').addEventListener('click',e=>{if(e.target.id==='rules')$('#rules').hidden=true;});
 function colorIdx(pid,cfg,ps){let i=cfg&&cfg.started?cfg.seats.indexOf(pid):-1;if(i<0)i=ps.findIndex(p=>p.pid===pid);return Math.max(0,i)%4;}
 function avatar(pid,nick,cfg,ps,extra){const c=COLORS[colorIdx(pid,cfg,ps)];return `<div class="avatar ${extra||''}" style="background:${c[0]};box-shadow:0 4px 0 ${c[1]};color:${c[2]}">${esc(initial(nick))}</div>`;}
 function nameOf(pid,by){return pid===S.pid?'あなた':((by[pid]&&by[pid].nick)||'だれか');}
@@ -554,7 +603,8 @@ function render(){
     $('#onlineNote').className='status'+(ok?'':' warn');$('#resumeBox').hidden=!ssGet('bid:save');$('#end').hidden=true;$('#rv').hidden=true;return;}
   const cfg=ctxCfg(C),ps=view(C),d=derive(C);
   renderInfo(cfg,d);renderPlayers(cfg,ps,d);renderInvite(cfg,ps);renderWait(cfg,ps);
-  const started=!!(cfg&&cfg.started);$('#rail').hidden=!started;$('#playgrid').hidden=!started;
+  const started=!!(cfg&&cfg.started);$('#rail').hidden=!started;$('#railHead').hidden=!started;$('#playgrid').hidden=!started;
+  if(started&&lsGet('bid:rules')!=='1')showRules();
   if(started){renderRail(d);renderBid(d,ps);renderHist(d);handleReveal(d);}
   renderEnd(d,ps);
 }
@@ -582,7 +632,7 @@ function renderPlayers(cfg,ps,d){
     else stt='考え中…';
     const chip=mk('div','pchip'+(me?' me':'')+(seated&&d&&lead>0&&d.st[id].stars===lead?' lead':''));
     chip.innerHTML=avatar(id,p?p.nick:'?',cfg,ps,on?'':'off')+`<div class="who"><span class="nm">${esc(p?p.nick:'?')}${me?'<small>あなた</small>':''}</span>`+
-      (seated?`<span class="nums"><span class="st">★<b>${d.st[id].stars}</b></span><span><b>${d.st[id].pts}</b>コイン</span></span>`:'')+
+      (seated?`<span class="nums"><span class="st">★合計<b>${d.st[id].stars}</b></span><span>のこり<b>${d.st[id].pts}</b></span></span>`:'')+
       `<span class="stt ${cls}">${stt}</span></div>`;
     el.appendChild(chip);});
 }
@@ -618,7 +668,8 @@ function renderRail(d){
   for(let r=0;r<ROUNDS;r++){const res=d.rounds[r];let cls='slot',who='これから';
     if(res){cls+=' done'+(res.winner?'':' tie');who=res.winner?nameOf(res.winner,d.by):'持ち越し';}
     else if(r===d.cur&&!d.done){cls+=' cur';who=d.carry?`今回 +${d.carry}`:'今回';}
-    const el=mk('div',cls);el.innerHTML=`<span class="rn">R${r+1}</span><span class="gem">${GEM}<b>${T[r]}</b></span><span class="who">${esc(who)}</span>`;
+    const t=TR[T[r]]||{name:'お宝',rar:'',c:'#fff'};
+    const el=mk('div',cls);el.innerHTML=`<span class="rn">ラウンド${r+1}</span><span class="gem">${gem(T[r])}<b>${T[r]}</b></span><span class="tn">${t.name}</span><span class="rr" style="color:${t.c}">${t.rar}・★${T[r]}</span><span class="who">${esc(who)}</span>`;
     if(res&&res.winner){const c=COLORS[colorIdx(res.winner,d.cfg,[])];el.querySelector('.who').style.cssText=`background:${c[0]};color:${c[2]}`;}
     rail.appendChild(el);}
 }
@@ -634,7 +685,8 @@ function renderBid(d,ps){
     const b=mk('button','btn sm','抜かして続ける');b.onclick=()=>dropPlayer(id);n.appendChild(b);c.appendChild(n);});}
   if(!S.host&&hostDown){const n=mk('div','notice');n.innerHTML='<span>部屋をつくった人の接続が切れました。再接続を待っています…</span>';c.appendChild(n);}
   if(d.done){c.insertAdjacentHTML('beforeend',`<div class="waitbox"><span class="big">しあい終了！</span></div>`);return;}
-  const pot=`<div class="potline"><span class="lbl">ラウンド ${r+1} のお宝</span><span class="pot">★${d.pot}${d.carry?`<small>（★${cfg.treasures[r]}＋持ち越し${d.carry}）</small>`:''}</span></div>`;
+  const pot=`<div class="potline"><span class="lbl">ラウンド ${r+1} / ${ROUNDS}：${trName(cfg.treasures[r])}</span><span class="pot">★${d.pot}${d.carry?`<small>（★${cfg.treasures[r]}＋持ち越し★${d.carry}）</small>`:'<small>ポイント</small>'}</span></div>`+
+    `<div class="rulestrip"><span>一番多く出した<b>1人</b>がゲット</span><span>出したコインは<b>戻らない</b></span><span>1位が同額なら<b>次に持ち越し</b></span></div>`;
   const othersHtml=()=>'<div class="others">'+cfg.seats.filter(id=>id!==S.pid).map(id=>{const p=d.by[id],nm=esc(p?p.nick:'だれか');
     if(isDropped(cfg,id,r))return `<span class="ostate off"><span class="d"></span>${nm}：抜けた</span>`;
     if(!(p&&p.on!==false))return `<span class="ostate off"><span class="d"></span>${nm}：接続待ち</span>`;
@@ -681,7 +733,7 @@ function handleReveal(d){
   const verdict=x.winner?(mine?`★${x.pot} ゲット！`:`${esc(nameOf(x.winner,d.by))}さんが★${x.pot} ゲット`):'同額で並んだ！';
   const sub=x.winner?`${x.max} コインで落札`:`${x.max} コインで${x.top.length}人が並んだので、★${x.pot} は次のラウンドに持ち越し`;
   const anyBad=Object.keys(x.bad).length?'（⚠ 入札が途中で変わった可能性がある人がいます）':'';
-  rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}・お宝 ★${x.pot}</span><div class="cards${n>2?' many':''}" style="--n:${n}">${cards}</div>
+  rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}：${trName(d.cfg.treasures[x.r])}　★${x.pot}</span><div class="cards${n>2?' many':''}" style="--n:${n}">${cards}</div>
     <div class="verdict ${vcls}">${verdict}</div><span class="sub">${sub}${anyBad}</span><span class="sub" style="font-size:12px">タップで閉じる</span></div>`;
   rv.hidden=false;SFX.flip();setTimeout(()=>{(mine?SFX.coin:x.winner?SFX.lose:SFX.tie)();},900);
   clearTimeout(rvTimer);rvTimer=setTimeout(()=>{rv.hidden=true;render();},3400);
