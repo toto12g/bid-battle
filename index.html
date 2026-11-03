@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>入札バトル</title>
-<meta name="description" content="100コインで5つのお宝をこっそり入札。多く出したほうがゲット、でも出したコインは戻らない。2人でサクッと心理戦。">
+<meta name="description" content="100コインで5つのお宝をこっそり入札。一番多く出した人がゲット、でも出したコインは戻らない。2〜4人でサクッと心理戦。">
 <meta property="og:title" content="入札バトル">
-<meta property="og:description" content="こっそり入札して、同時に公開。2分で終わる2人用の心理戦。リンクを開くだけで遊べます。">
+<meta property="og:description" content="こっそり入札して、いっせいに公開。2〜4人で遊べる3分の心理戦。リンクを開くだけで参加できます。">
 <meta name="theme-color" content="#0e3a34">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23f2c14e' stroke='%23b8892a' stroke-width='5'/%3E%3Cpath d='M32 16l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z' fill='%23fff6d6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,13 +14,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rampart+One&family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-/* Layout: a green-felt auction table — treasure rail across the top, one big bid dial in the middle, the reveal as the show moment */
+/* Layout: a green-felt auction table — players along the top, treasure rail, one big bid dial, the reveal as the show moment */
 :root{
   --felt:#0e3a34; --felt2:#0b2f2a; --panel:#165045; --panel2:#1d5f53; --line:#2b6e61;
   --ink:#f4f6ef; --muted:#a8c9be; --cream:#fbf3dc;
   --gold:#f2c14e; --gold-dk:#b8892a; --gold-soft:rgba(242,193,78,.22);
-  --me:#ff8a5b; --me-dk:#c65c31; --me-soft:rgba(255,138,91,.24);
-  --op:#7fb7ff; --op-dk:#4677c4; --op-soft:rgba(127,183,255,.22);
+  --me:#ff8a5b; --me-dk:#c65c31; --op:#7fb7ff; --op-dk:#4677c4;
   --bad:#ff5d73; --good:#66e3a4;
   --f-title:"Rampart One","Dela Gothic One",sans-serif;
   --f-disp:"Dela Gothic One","M PLUS Rounded 1c","Hiragino Sans",sans-serif;
@@ -35,7 +34,7 @@ body{margin:0;background:var(--felt);color:var(--ink);font-family:var(--f-body);
     radial-gradient(rgba(255,255,255,.035) 1px,transparent 1.4px),
     repeating-linear-gradient(45deg,rgba(0,0,0,.05) 0 2px,transparent 2px 6px);
   background-size:auto,18px 18px,auto;background-attachment:fixed}
-.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+.wrap{max-width:1000px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-top:calc(22px + env(safe-area-inset-top,0px));padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
 h1,h2{font-weight:400;margin:0}
 h2{font-family:var(--f-disp);font-size:19px;text-wrap:balance}
@@ -67,8 +66,7 @@ label{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.06em}
 .invite{background:linear-gradient(100deg,var(--op) 0%,#b3d4ff 100%);color:#071a36;border-radius:16px;padding:12px 16px;margin-bottom:18px;font-weight:800}
 .namebar{display:flex;gap:12px;align-items:center;margin-bottom:18px;max-width:460px}
 .avatar{width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;font-family:var(--f-disp);font-size:18px;color:#2b0f04;background:var(--me);box-shadow:0 4px 0 var(--me-dk)}
-.avatar.op{background:var(--op);box-shadow:0 4px 0 var(--op-dk);color:#071a36}
-.avatar.off{background:var(--panel2);box-shadow:0 4px 0 #0c3a32;color:var(--muted)}
+.avatar.off{background:var(--panel2)!important;box-shadow:0 4px 0 #0c3a32!important;color:var(--muted)!important}
 .modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 @media (max-width:860px){.modes{grid-template-columns:1fr}}
 .mode{display:flex;flex-direction:column;gap:14px}
@@ -86,53 +84,61 @@ input#code{font-family:var(--f-disp);font-weight:400;font-size:28px;text-align:c
 .howto summary::-webkit-details-marker{display:none}
 .howto summary::after{content:"＋";margin-left:auto;color:var(--muted);font-family:var(--f-body);font-weight:800}
 .howto[open] summary::after{content:"－"}
-.steps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:12px;counter-reset:s;max-width:640px}
+.steps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:12px;counter-reset:s;max-width:660px}
 .steps li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;counter-increment:s}
 .steps li::before{content:counter(s);font-family:var(--f-disp);width:30px;height:30px;border-radius:50%;background:var(--gold);color:#2b1e00;display:grid;place-items:center;font-size:14px}
 .steps b{color:var(--gold)}
 
-/* HUD */
+/* room header + players */
 .topbtns{display:flex;justify-content:space-between;gap:8px;margin-bottom:14px}
-.hud{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center;margin-bottom:16px}
-.pcard{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:16px;padding:10px 12px;min-width:0;border:2px solid transparent}
-.pcard.right{flex-direction:row-reverse;text-align:right}
-.pcard .who{min-width:0;display:grid;line-height:1.35}
-.pcard .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pcard .nums{display:flex;gap:10px;font-size:13px;color:var(--muted);flex-wrap:wrap}
-.pcard.right .nums{justify-content:flex-end}
-.pcard .nums b{font-family:var(--f-disp);font-weight:400;color:var(--ink);font-size:16px;font-variant-numeric:tabular-nums}
-.pcard .nums .st b{color:var(--gold)}
-.pcard.lead{border-color:var(--gold)}
-.mid{display:grid;justify-items:center;gap:6px;text-align:center}
-.vs{font-family:var(--f-disp);font-size:22px;color:var(--muted)}
+.roominfo{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;margin-bottom:12px}
 .codebox{display:flex;gap:4px;cursor:pointer}
 .codebox .t{font-family:var(--f-disp);font-size:15px;width:26px;height:30px;display:grid;place-items:center;background:var(--felt2);border-radius:7px;box-shadow:0 3px 0 #06201c}
-.meta{font-size:11px;color:var(--muted);white-space:nowrap}
-@media (max-width:560px){.hud{grid-template-columns:1fr 1fr}.mid{grid-column:1 / -1;grid-row:1}.vs{display:none}.pcard .avatar{width:36px;height:36px;font-size:15px}}
+.meta{font-size:12px;color:var(--muted);white-space:nowrap}
+.meta b{font-family:var(--f-disp);font-weight:400;color:var(--ink)}
+.players{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:10px;margin-bottom:16px}
+@media (max-width:640px){.players{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pchip{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:16px;padding:10px 12px;min-width:0;border:2px solid transparent}
+.pchip .avatar{width:38px;height:38px;font-size:16px;border-radius:12px}
+.pchip .who{min-width:0;display:grid;line-height:1.35}
+.pchip .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pchip .nm small{font-weight:700;color:var(--muted);font-size:11px;margin-left:4px}
+.pchip .nums{display:flex;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.pchip .nums b{font-family:var(--f-disp);font-weight:400;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.pchip .nums .st b{color:var(--gold)}
+.pchip .stt{font-size:11px;font-weight:800;color:var(--muted)}
+.pchip .stt.ok{color:var(--gold)}.pchip .stt.bad{color:var(--bad)}
+.pchip.lead{border-color:var(--gold)}
+.pchip.me{box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
 
-.invitecard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);gap:18px;align-items:center;margin-bottom:18px;box-shadow:0 6px 0 rgba(0,0,0,.3),0 0 0 3px var(--op)}
+.invitecard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);gap:18px;align-items:center;margin-bottom:16px;box-shadow:0 6px 0 rgba(0,0,0,.3),0 0 0 3px var(--op)}
 .invitecard h2{font-size:22px;margin-bottom:4px}
 .invitecard p{color:var(--muted);font-size:14px}
 .invitecard .codebox{margin-top:12px}
 .invitecard .codebox .t{width:40px;height:46px;font-size:24px;border-radius:10px}
 .invitecard .acts{display:grid;gap:10px}
 @media (max-width:640px){.invitecard{grid-template-columns:1fr}}
+.waitroom{display:grid;gap:14px;margin-bottom:16px}
+.members{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.members{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.seat{background:var(--felt2);border-radius:16px;padding:14px 8px;display:grid;justify-items:center;gap:6px;text-align:center;min-width:0}
+.seat .nm{font-weight:800;font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat.empty{border:2px dashed var(--line);background:transparent;color:var(--muted)}
+.seat.empty .avatar{background:transparent!important;box-shadow:none!important;border:2px dashed var(--line);color:var(--muted)!important}
+.notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:rgba(255,93,115,.14);border:2px solid rgba(255,93,115,.45);border-radius:14px;padding:10px 12px;margin-bottom:14px;font-size:14px}
+.notice span{flex:1;min-width:12em}
 
 /* treasure rail */
 .rail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:16px}
-.slot{background:var(--panel);border-radius:16px;padding:10px 6px 8px;display:grid;justify-items:center;gap:4px;text-align:center;border:2px solid transparent;min-width:0;position:relative}
+.slot{background:var(--panel);border-radius:16px;padding:10px 4px 8px;display:grid;justify-items:center;gap:4px;text-align:center;border:2px solid transparent;min-width:0}
 .slot .rn{font-size:11px;color:var(--muted);font-weight:800}
 .slot .gem{width:44px;height:44px;display:grid;place-items:center;position:relative}
 .slot .gem svg{position:absolute;inset:0;width:100%;height:100%}
 .slot .gem b{position:relative;font-family:var(--f-disp);font-weight:400;font-size:17px;color:#3a2a00}
-.slot .who{font-size:11px;font-weight:800;padding:1px 8px;border-radius:99px;background:var(--felt2);color:var(--muted);white-space:nowrap}
+.slot .who{font-size:11px;font-weight:800;padding:1px 8px;border-radius:99px;background:var(--felt2);color:var(--muted);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .slot.cur{border-color:var(--gold);background:linear-gradient(var(--gold-soft),var(--gold-soft)),var(--panel);transform:translateY(-3px)}
 .slot.cur .who{background:var(--gold);color:#2b1e00}
-.slot.me .who{background:var(--me);color:#2b0f04}
-.slot.op .who{background:var(--op);color:#071a36}
-.slot.tie .who{background:var(--panel2);color:var(--ink)}
-.slot.done:not(.me):not(.op){opacity:.6}
-.slot.me,.slot.op{opacity:.9}
+.slot.done.tie{opacity:.6}
 
 /* bid panel */
 .playgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
@@ -155,54 +161,60 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 .steppers .btn{padding:9px 4px;font-family:var(--f-disp);font-weight:400}
 .chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
 .chips .btn{padding:7px 4px;font-size:13px}
-.oppstate{display:flex;align-items:center;gap:10px;background:var(--felt2);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:14px}
-.oppstate .d{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
-.oppstate.locked .d{background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
-.oppstate.locked{color:var(--gold);font-weight:800}
-.waitbox{display:grid;justify-items:center;gap:8px;text-align:center;padding:26px 0}
-.waitbox .big{font-family:var(--f-disp);font-size:28px}
+.others{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ostate{display:flex;align-items:center;gap:8px;background:var(--felt2);border-radius:12px;padding:7px 10px;font-size:13px;min-width:0}
+.ostate .d{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.ostate.locked{color:var(--gold);font-weight:800}
+.ostate.locked .d{background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.ostate.off{color:var(--bad)}.ostate.off .d{background:var(--bad)}
+.waitbox{display:grid;justify-items:center;gap:8px;text-align:center;padding:22px 0}
+.waitbox .big{font-family:var(--f-disp);font-size:26px;text-wrap:balance}
 .coinspin{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe7a0,var(--gold) 55%,var(--gold-dk));box-shadow:0 4px 0 #6b4c0c;animation:spin 1.4s linear infinite}
 @keyframes spin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
 .hist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.hist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--felt2);border-radius:12px;padding:8px 12px;font-size:13px}
-.hist .r{font-family:var(--f-disp);color:var(--gold)}
-.hist .bids{font-variant-numeric:tabular-nums}
-.hist .bids b{font-family:var(--f-disp);font-weight:400;font-size:15px}
-.hist .bids .m{color:var(--me)}.hist .bids .o{color:var(--op)}
-.hist .res{font-weight:800;font-size:12px}
-.hist .res.me{color:var(--me)}.hist .res.op{color:var(--op)}.hist .res.tie{color:var(--muted)}
+.hist li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:center;background:var(--felt2);border-radius:12px;padding:8px 12px;font-size:13px}
+.hist .r{font-family:var(--f-disp);color:var(--gold);grid-row:span 2}
+.hist .res{font-weight:800}
+.hist .bids{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.hist .bids b{font-family:var(--f-disp);font-weight:400;color:var(--ink);font-size:13px}
 .tip{font-size:13px;color:var(--muted);margin-top:12px}
 
 /* reveal */
-.overlay{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(4,20,17,.72);padding:16px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-.reveal{display:grid;justify-items:center;gap:16px;text-align:center;width:100%;max-width:460px}
+.overlay{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(4,20,17,.74);padding:16px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);overflow:auto}
+.reveal{display:grid;justify-items:center;gap:16px;text-align:center;width:100%;max-width:620px}
 .reveal .ttl{font-family:var(--f-disp);font-size:18px;color:var(--muted)}
-.cards{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;width:100%}
-.bcard{perspective:600px;height:170px}
-.bcard .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:flip .7s .25s cubic-bezier(.3,1.4,.5,1) both}
+.cards{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:10px;width:100%;max-width:calc(var(--n,2) * 150px)}
+@media (max-width:520px){.cards.many{grid-template-columns:repeat(2,minmax(0,1fr));max-width:320px}}
+.bcard{perspective:600px;height:150px}
+.bcard .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:flip .7s cubic-bezier(.3,1.4,.5,1) both}
 .bcard .f,.bcard .b{position:absolute;inset:0;border-radius:18px;display:grid;place-items:center;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .bcard .b{background:repeating-linear-gradient(45deg,var(--panel2) 0 8px,var(--panel) 8px 16px);border:3px solid var(--gold-dk)}
-.bcard .f{background:var(--cream);color:#1c2a26;transform:rotateY(180deg);box-shadow:0 6px 0 rgba(0,0,0,.35);align-content:center;gap:2px}
-.bcard .f .n{font-family:var(--f-disp);font-size:54px;line-height:1}
-.bcard .f .w{font-size:12px;font-weight:800;color:#5d6d68}
-.bcard.me .f{border:4px solid var(--me)}.bcard.op .f{border:4px solid var(--op)}
+.bcard .f{background:var(--cream);color:#1c2a26;transform:rotateY(180deg);box-shadow:0 6px 0 rgba(0,0,0,.35);align-content:center;gap:2px;border:4px solid var(--pc,#888)}
+.bcard .f .n{font-family:var(--f-disp);font-size:46px;line-height:1}
+.bcard .f .w{font-size:12px;font-weight:800;color:#4d5d58;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bcard.win .f{box-shadow:0 0 0 5px var(--gold),0 0 30px rgba(242,193,78,.7)}
+.bcard.tie .f{box-shadow:0 0 0 4px var(--cream)}
 @keyframes flip{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
-.cards .vs{font-size:20px}
-.verdict{font-family:var(--f-disp);font-size:clamp(28px,7vw,40px);line-height:1.2;animation:pop .5s .9s cubic-bezier(.2,1.6,.4,1) both}
+.verdict{font-family:var(--f-disp);font-size:clamp(26px,7vw,38px);line-height:1.25;animation:pop .5s .9s cubic-bezier(.2,1.6,.4,1) both;text-wrap:balance}
 .verdict.me{color:var(--gold)}.verdict.op{color:var(--op)}.verdict.tie{color:var(--cream)}
 .reveal .sub{color:var(--muted);animation:pop .4s 1.1s both}
 @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
-.modal{background:var(--panel);border-radius:24px;padding:28px 24px;text-align:center;max-width:400px;width:100%;box-shadow:0 8px 0 rgba(0,0,0,.35);animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
-.modal .big{font-family:var(--f-title);font-size:48px;line-height:1.1;margin-bottom:8px}
+.modal{background:var(--panel);border-radius:24px;padding:26px 22px;text-align:center;max-width:420px;width:100%;box-shadow:0 8px 0 rgba(0,0,0,.35);animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+.modal .big{font-family:var(--f-title);font-size:46px;line-height:1.1;margin-bottom:12px}
 .modal .big.win{color:var(--gold)}.modal .big.lose{color:var(--op)}.modal .big.draw{color:var(--cream)}
-.modal .score{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 18px}
-.modal .score div{background:var(--felt2);border-radius:14px;padding:10px;display:grid}
-.modal .score b{font-family:var(--f-disp);font-weight:400;font-size:28px;color:var(--gold)}
-.modal .score span{font-size:12px;color:var(--muted)}
-.modal .stack{display:grid;gap:12px}
+.rank{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px;text-align:left}
+.rank li{display:grid;grid-template-columns:2.2em auto minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--felt2);border-radius:14px;padding:8px 12px}
+.rank .no{font-family:var(--f-disp);font-size:18px;color:var(--gold)}
+.rank .avatar{width:30px;height:30px;font-size:13px;border-radius:9px;box-shadow:none}
+.rank .nm{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .sc{text-align:right;font-size:12px;color:var(--muted);line-height:1.3}
+.rank .sc b{font-family:var(--f-disp);font-weight:400;font-size:18px;color:var(--gold)}
+.rank li.me{box-shadow:inset 0 0 0 2px var(--gold)}
 .againmsg{font-size:13px;color:var(--muted)}
 .againmsg.hot{color:var(--gold);font-weight:800;font-size:15px}
+.againlist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.againlist span{font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px;background:var(--felt2);color:var(--muted)}
+.againlist span.ok{background:var(--gold);color:#2b1e00}
 .againbar{margin-bottom:16px;display:grid;gap:12px;box-shadow:0 6px 0 rgba(0,0,0,.3),0 0 0 3px var(--gold)}
 .againhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .againhead b{font-family:var(--f-disp);font-weight:400;font-size:22px;color:var(--gold)}
@@ -219,7 +231,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
       <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="#f2c14e" stroke="#b8892a" stroke-width="5"/><path d="M32 16l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z" fill="#fff6d6"/></svg>
       <h1>入札バトル</h1>
     </div>
-    <p class="tagline">100コインで5つのお宝をこっそり入札。多く出したほうがゲット。でも、出したコインは戻らない。</p>
+    <p class="tagline">100コインで5つのお宝をこっそり入札。一番多く出した人がゲット。でも、出したコインは戻らない。2〜4人で遊べます。</p>
     <div class="invite" id="inviteNote" hidden></div>
 
     <div class="namebar">
@@ -230,7 +242,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
     <div class="modes">
       <div class="card mode">
         <div class="head"><div class="ic" style="background:var(--me)"><svg viewBox="0 0 24 24" fill="none" stroke="#2b0f04" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><h2>部屋をつくる</h2></div>
-        <p>部屋をつくると招待リンクが出ます。Discordに貼るだけで友達が入れます。</p>
+        <p>招待リンクをDiscordに貼って、2〜4人集まったらスタート。</p>
         <div class="grow"></div>
         <button id="create" class="btn me big">部屋をつくる</button>
       </div>
@@ -244,6 +256,8 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
       <div class="card mode">
         <div class="head"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24" fill="none" stroke="#2b1e00" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9.5 13h.01M14.5 13h.01"/></svg></div><h2>CPUとれんしゅう</h2></div>
         <p>ひとりで遊び方を試せます。CPUもちゃんと駆け引きしてきます。</p>
+        <div class="field"><label for="cpuN">CPUの人数</label>
+          <select id="cpuN"><option value="1">1人（2人対戦）</option><option value="2" selected>2人（3人対戦）</option><option value="3">3人（4人対戦）</option></select></div>
         <div class="grow"></div>
         <button id="cpu" class="btn gold big">れんしゅう開始</button>
       </div>
@@ -254,23 +268,25 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
     <details class="card howto" open>
       <summary>遊び方</summary>
       <ol class="steps">
-        <li><span>お互い<b>100コイン</b>でスタート。お宝は<b>★1〜★5</b>の5つで、出てくる順番は最初から全部見えます。</span></li>
+        <li><span>2〜4人で遊びます。全員<b>100コイン</b>でスタート。お宝は<b>★1〜★5</b>の5つで、出てくる順番は最初から全部見えます。</span></li>
         <li><span>毎ラウンド、今のお宝にいくら出すかを<b>こっそり</b>決めて入札します。</span></li>
-        <li><span>2人とも入札したら<b>同時に公開</b>。多く出したほうがお宝をゲット。</span></li>
+        <li><span>全員が入札したら<b>いっせいに公開</b>。一番多く出した人がお宝をゲット。</span></li>
         <li><span>出したコインは<b>勝っても負けても戻りません</b>。捨てるラウンドを作るのも作戦です。</span></li>
-        <li><span>同じ金額なら、お宝は<b>次のラウンドに上乗せ</b>されます。</span></li>
-        <li><span>5ラウンド後、<b>★の合計</b>が多いほうの勝ち。同じなら残りコインが多いほうの勝ち。</span></li>
+        <li><span>一番多い金額で何人か並んだら、お宝は<b>次のラウンドに上乗せ</b>されます。</span></li>
+        <li><span>5ラウンド後、<b>★の合計</b>が多い人の勝ち。同じなら残りコインが多い人が上です。</span></li>
       </ol>
     </details>
   </section>
 
   <section id="game" hidden>
     <div class="topbtns"><button id="leave" class="btn sm">← ロビー</button><button id="mute" class="btn sm" aria-pressed="false">音：オン</button></div>
-    <div class="hud" id="hud"></div>
+    <div class="roominfo" id="roominfo"></div>
+    <div class="players" id="players"></div>
     <div class="card invitecard" id="inviteCard" hidden></div>
+    <div class="card waitroom" id="waitRoom" hidden></div>
     <div class="card againbar" id="againBar" hidden></div>
-    <div class="rail" id="rail"></div>
-    <div class="playgrid" id="playgrid">
+    <div class="rail" id="rail" hidden></div>
+    <div class="playgrid" id="playgrid" hidden>
       <div class="card" id="bidCard"></div>
       <div class="card"><h2 style="margin-bottom:12px">きろく</h2><ul class="hist" id="hist"></ul><p class="tip" id="tip"></p></div>
     </div>
@@ -284,7 +300,9 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 <script>
 (function(){
 const $=s=>document.querySelector(s);
-const START=100,ROUNDS=5,PREFIX='nyusatsu-v1-';
+const START=100,ROUNDS=5,MAXP=4,PREFIX='nyusatsu-v2-';
+const COLORS=[['#ff8a5b','#c65c31','#2b0f04'],['#7fb7ff','#4677c4','#071a36'],['#66e3a4','#2f9e6c','#03281a'],['#c59bff','#8a5fd0','#1d0838']];
+const BOTNAMES=['CPUアカ','CPUアオ','CPUミドリ'];
 function rid(){return Math.random().toString(36).slice(2,10);}
 function mk(t,c,txt){const e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -316,140 +334,191 @@ const SFX={tick:()=>tone(900,.03,'square',.03),coin:()=>{tone(988,.07,'square',.
 async function H(v,s){const t=v+'|'+s;
   try{if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).slice(0,12).map(x=>x.toString(16).padStart(2,'0')).join('');}}catch(e){}
   let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return 'x'+h.toString(16);}
-const VER=new Map(); // "commit|v|s" -> true/false
+const VER=new Map();
 function verKey(c,r){return c+'|'+r.v+'|'+r.s;}
-function ensureVerify(commits,reveals){if(!Array.isArray(commits)||!Array.isArray(reveals))return;
-  reveals.forEach((r,i)=>{const c=commits[i];if(!r||typeof c!=='string')return;const k=verKey(c,r);if(VER.has(k))return;VER.set(k,null);
+function ensureVerify(p){if(!p||!Array.isArray(p.commits)||!Array.isArray(p.reveals))return;
+  p.reveals.forEach((r,i)=>{const c=p.commits[i];if(!r||typeof c!=='string')return;const k=verKey(c,r);if(VER.has(k))return;VER.set(k,null);
     H(r.v,r.s).then(h=>{VER.set(k,h===c);onVerified();});});}
 
-/* ---------- game model ---------- */
-function freshGame(S){Object.assign(S,{commits:[],reveals:[],mine:[]});}
-function newState(o){const S={pid:rid(),nick:o.nick,host:o.host,mode:o.mode,code:o.code||null,cfg:o.cfg||null,game:o.cfg?o.cfg.game:0,again:-1,oppPid:null};freshGame(S);return S;}
-function newCfg(game){return{treasures:shuffle([1,2,3,4,5]),game};}
-function pres(S){return{v:2,app:'bid',pid:S.pid,nick:S.nick,host:S.host,game:S.game,cfg:S.host?S.cfg:null,opp:S.host?S.oppPid:null,
-  commits:S.commits,reveals:S.reveals,again:S.again};}
-function step(S,O){
-  if(!O)return false;let ch=false;
-  if(S.host){if(!S.oppPid){S.oppPid=O.pid;ch=true;}}
-  else if(O.cfg&&Array.isArray(O.cfg.treasures)&&O.cfg.treasures.length===ROUNDS){
-    const g=O.cfg.game|0;
-    if(S.cfg&&g!==S.game){freshGame(S);ch=true;}
-    if(S.game!==g){S.game=g;ch=true;}
-    if(JSON.stringify(S.cfg)!==JSON.stringify(O.cfg)){S.cfg=O.cfg;ch=true;}
-  }
-  if(!S.cfg||O.game!==S.game)return ch;
+/* ---------- model (shared by every client and the CPUs) ---------- */
+function newState(o){return{pid:rid(),nick:o.nick,host:o.host,mode:o.mode,code:o.code||null,cfg:o.cfg||null,game:o.cfg?o.cfg.game:-1,again:-1,commits:[],reveals:[],mine:[]};}
+function freshGame(S){S.commits=[];S.reveals=[];S.mine=[];}
+function waitCfg(game){return{game,started:false,treasures:[],seats:[],dropped:{}};}
+function newCfg(game,seats){return{game,started:true,treasures:shuffle([1,2,3,4,5]),seats,dropped:{}};}
+function pres(S){return{pid:S.pid,nick:S.nick,host:S.host,game:S.game,commits:S.commits.slice(),reveals:S.reveals.slice(),again:S.again};}
+function cleanP(p){if(!p||typeof p!=='object')return null;const pid=typeof p.pid==='string'?p.pid.slice(0,16):'';if(!pid)return null;
+  return{pid,nick:(typeof p.nick==='string'?p.nick.slice(0,12):'')||'プレイヤー',host:!!p.host,game:Number.isInteger(p.game)?p.game:-1,
+    commits:Array.isArray(p.commits)?p.commits.slice(0,ROUNDS).map(c=>typeof c==='string'?c.slice(0,40):null):[],
+    reveals:Array.isArray(p.reveals)?p.reveals.slice(0,ROUNDS).map(r=>r&&Number.isInteger(r.v)&&typeof r.s==='string'?{v:r.v,s:r.s.slice(0,16)}:null):[],
+    again:Number.isInteger(p.again)?p.again:-1,on:p.on!==false};}
+function cleanCfg(c){if(!c||typeof c!=='object')return null;
+  const t=Array.isArray(c.treasures)?c.treasures.slice(0,ROUNDS).map(x=>x|0):[];
+  const dropped={};if(c.dropped&&typeof c.dropped==='object')for(const k in c.dropped)if(Number.isInteger(c.dropped[k]))dropped[k]=c.dropped[k];
+  return{game:c.game|0,started:!!c.started&&t.length===ROUNDS,treasures:t,seats:Array.isArray(c.seats)?c.seats.filter(x=>typeof x==='string').slice(0,MAXP):[],dropped};}
+function isDropped(cfg,id,r){return!!cfg&&Number.isInteger(cfg.dropped[id])&&r>=cfg.dropped[id];}
+function ctxCfg(ctx){return ctx.S.host?ctx.S.cfg:ctx.room.cfg;}
+function view(ctx){const S=ctx.S,me=Object.assign(pres(S),{on:true}),list=ctx.room.players;
+  if(S.host)return[me,...list.filter(p=>p.pid!==S.pid)];
+  const i=list.findIndex(p=>p.pid===S.pid);if(i<0)return[...list,me];const a=list.slice();a[i]=me;return a;}
+function byId(ps){const m={};ps.forEach(p=>m[p.pid]=p);return m;}
+function step(ctx){
+  const S=ctx.S,cfg=ctxCfg(ctx);if(!cfg)return false;let ch=false;
+  if(!S.host){if(cfg.game!==S.game){freshGame(S);S.game=cfg.game;ch=true;}
+    if(JSON.stringify(S.cfg)!==JSON.stringify(cfg)){S.cfg=cfg;ch=true;}}
+  if(!cfg.started||!cfg.seats.includes(S.pid))return ch;
   const r=S.reveals.length;
-  if(r<ROUNDS&&S.commits[r]&&Array.isArray(O.commits)&&typeof O.commits[r]==='string'&&S.mine[r]){S.reveals[r]=S.mine[r];ch=true;}
+  if(r<ROUNDS&&S.commits[r]&&S.mine[r]){const by=byId(view(ctx));
+    const all=cfg.seats.every(id=>id===S.pid||isDropped(cfg,id,r)||(by[id]&&by[id].game===cfg.game&&typeof by[id].commits[r]==='string'));
+    if(all){S.reveals[r]=S.mine[r];ch=true;}}
   return ch;
 }
-function derive(S,O){
-  const T=S.cfg.treasures,me={pts:START,stars:0},op={pts:START,stars:0},rounds=[];let carry=0;
-  const oc=O&&O.game===S.game&&Array.isArray(O.commits)?O.commits:[],orv=O&&O.game===S.game&&Array.isArray(O.reveals)?O.reveals:[];
-  for(let r=0;r<ROUNDS;r++){
-    const a=S.reveals[r],b=orv[r];if(!a||!b||typeof oc[r]!=='string')break;
-    const ok=VER.get(verKey(oc[r],b));if(ok==null)break;
-    const av=okInt(a.v,0,me.pts)?a.v:0,bv=okInt(b.v,0,op.pts)?b.v:0;
-    const pot=T[r]+carry;let w;
-    if(av>bv){me.stars+=pot;carry=0;w='me';}else if(bv>av){op.stars+=pot;carry=0;w='op';}else{carry=pot;w='tie';}
-    me.pts-=av;op.pts-=bv;rounds.push({r,av,bv,w,pot,base:T[r],bad:!ok});
-  }
+function derive(ctx){
+  const S=ctx.S,cfg=ctxCfg(ctx);if(!cfg||!cfg.started)return null;
+  const ps=view(ctx),by=byId(ps),T=cfg.treasures,seats=cfg.seats,st={};seats.forEach(id=>st[id]={pts:START,stars:0});
+  let carry=0;const rounds=[];
+  for(let r=0;r<ROUNDS;r++){const bids={},bad={};let ok=true;
+    for(const id of seats){if(isDropped(cfg,id,r)){bids[id]=0;continue;}
+      const p=by[id],same=p&&p.game===cfg.game,c=same?p.commits[r]:null,rv=same?p.reveals[r]:null;
+      if(typeof c!=='string'||!rv){ok=false;break;}
+      if(id!==S.pid){const v=VER.get(verKey(c,rv));if(v==null){ok=false;break;}if(!v)bad[id]=true;}
+      bids[id]=okInt(rv.v,0,st[id].pts)?rv.v:0;}
+    if(!ok)break;
+    const max=Math.max(...seats.map(id=>bids[id])),top=seats.filter(id=>bids[id]===max),pot=T[r]+carry;let winner=null;
+    if(top.length===1){winner=top[0];st[winner].stars+=pot;carry=0;}else carry=pot;
+    seats.forEach(id=>st[id].pts-=bids[id]);rounds.push({r,bids,winner,top,pot,max,bad});}
   const cur=rounds.length,done=cur>=ROUNDS;
-  return{me,op,carry:done?0:carry,rounds,cur,done,pot:done?0:T[cur]+carry,remain:done?0:T.slice(cur).reduce((x,y)=>x+y,0)+carry};
+  return{st,rounds,cur,done,cfg,seats,by,carry:done?0:carry,pot:done?0:T[cur]+carry,remain:done?0:T.slice(cur).reduce((a,b)=>a+b,0)+carry};
 }
 
-/* ---------- CPU ---------- */
-function botBid(B,d){
-  const pts=d.me.pts,left=ROUNDS-d.cur;if(pts<=0)return 0;
-  if(left===1)return pts;
-  let share=pts*d.pot/d.remain;
-  const r=Math.random();
-  if(d.pot<=2&&r<.35)return Math.min(pts,Math.round(Math.random()*3));      // throw away cheap rounds sometimes
-  if(d.pot>=5&&r>.7)share*=1.5;                                             // go big on fat pots
-  share*=0.65+Math.random()*0.7;
-  if(d.op.pts<share&&Math.random()<.6)share=Math.min(pts,d.op.pts+1);        // just outbid what they can afford
-  return Math.max(0,Math.min(pts,Math.round(share)));
-}
-function cpuT(){
-  const B=newState({nick:'CPU',host:false,mode:'bot'});let hp=null,busy=false,alive=true,lastSent='';
-  function send(){const p=pres(B),j=JSON.stringify(p);if(j===lastSent)return;lastSent=j;setTimeout(()=>alive&&onOpp(p),120);}
-  function tick(){if(!alive||!hp)return;step(B,hp);ensureVerify(hp.commits,hp.reveals);ensureVerify(B.commits,B.reveals);
-    if(B.cfg&&hp.game===B.game){const d=derive(B,hp);
-      if(d.done)B.again=B.game;
-      else if(!B.commits[d.cur]&&!busy){busy=true;const r0=d.cur;
-        setTimeout(async()=>{if(!alive){return;}const d2=derive(B,hp);if(d2.cur!==r0||B.commits[r0]){busy=false;return;}
-          const v=botBid(B,d2),s=rid();B.mine[r0]={v,s};B.commits[r0]=await H(v,s);busy=false;step(B,hp);send();},1100+Math.random()*2200);}}
-    send();}
-  const iv=setInterval(tick,450);
-  return{publish(p){hp=JSON.parse(JSON.stringify(p));setTimeout(tick,100);},leave(){alive=false;clearInterval(iv);},nudge:tick};
-}
+/* ---------- main client ---------- */
+let S=null;const ROOM={players:[],cfg:null};const C={get S(){return S;},room:ROOM};
+let T=null,bidVal=0,bidRound=-1,seenRounds=null,rvTimer=0,endShown=-1,endOpenAt=0,modalClosed=false,locking=false;
+let net='idle',roomFull=false,lostHost=false,hostDown=false,lookTimer=null,bots=[];
 
-/* ---------- online (PeerJS) ---------- */
-let roomFull=false,net='idle',lostHost=false,lookTimer=null;
-function netT(){
-  let alive=true,conn=null,last=null,P=null,retry=0,idTries=0;const opts={debug:0};
+/* ---------- host hub: the room creator relays everyone's state ---------- */
+const hub={peers:new Map(),seq:0};
+function hubReset(){hub.peers.clear();hub.seq=0;}
+function onlineCount(){let n=1;for(const e of hub.peers.values())if(e.on)n++;return n;}
+function hubReceive(p,send,conn){
+  if(!S||!S.host)return true;const q=cleanP(p);if(!q||q.pid===S.pid)return true;
+  let e=hub.peers.get(q.pid);
+  if(!e){if(onlineCount()>=MAXP)return false;e={order:hub.seq++};hub.peers.set(q.pid,e);SFX.join();}
+  else{if(e.conn&&conn&&e.conn!==conn){try{e.conn.close();}catch(_){}}if(!e.on)SFX.join();}
+  e.pres=q;e.on=true;e.send=send;e.conn=conn||null;hostUpdate();return true;}
+function hubOffline(pid,conn){const e=hub.peers.get(pid);if(!e||(conn&&e.conn!==conn))return;e.on=false;e.send=null;e.conn=null;
+  const cfg=S&&S.cfg;if(!(cfg&&cfg.started&&cfg.seats.includes(pid)))hub.peers.delete(pid);hostUpdate();}
+function hostRoom(){ROOM.players=[...hub.peers.values()].sort((a,b)=>a.order-b.order).map(e=>Object.assign({},e.pres,{on:e.on}));ROOM.cfg=S.cfg;}
+function hostUpdate(){if(!S||!S.host)return;hostRoom();step(C);view(C).forEach(ensureVerify);if(maybeRematch()){hostRoom();step(C);}save();broadcast();render();}
+function broadcast(){if(!S||!S.host)return;hostRoom();const snap={v:3,app:'bid',t:'snap',players:view(C),cfg:S.cfg};
+  for(const e of hub.peers.values())if(e.on&&e.send){try{e.send(snap);}catch(err){}}}
+function startGame(seats){S.cfg=newCfg(S.cfg.game+1,seats);S.game=S.cfg.game;freshGame(S);S.again=-1;resetView();}
+function onlinePids(){return view(C).filter(p=>p.on!==false).slice(0,MAXP).map(p=>p.pid);}
+function maybeRematch(){
+  if(!S||!S.host||!S.cfg.started)return false;const d=derive(C);if(!d||!d.done)return false;
+  const ps=view(C).filter(p=>p.on!==false);if(ps.length<2||!ps.every(p=>p.again===S.cfg.game))return false;
+  startGame(ps.slice(0,MAXP).map(p=>p.pid));return true;}
+function dropPlayer(pid){const d=derive(C);if(!S.host||!d||d.done)return;
+  const dr=Object.assign({},S.cfg.dropped);if(!Number.isInteger(dr[pid]))dr[pid]=d.cur;S.cfg=Object.assign({},S.cfg,{dropped:dr});hostUpdate();}
+
+/* ---------- guest side ---------- */
+function onSnap(snap){if(!S||S.host||!snap)return;
+  ROOM.players=(Array.isArray(snap.players)?snap.players:[]).map(cleanP).filter(Boolean).slice(0,MAXP+2);ROOM.cfg=cleanCfg(snap.cfg);
+  const g0=S.game,ch=step(C);if(S.game!==g0)resetView();view(C).forEach(ensureVerify);save();if(ch&&T)T.publish();render();}
+function act(){if(!S)return;if(S.host)hostUpdate();else{step(C);save();T&&T.publish();render();}}
+function onVerified(){if(!S)return;if(S.host)hostUpdate();else render();}
+function save(){if(S&&S.mode==='online')ssSet('bid:save',S);}
+
+/* ---------- PeerJS transports ---------- */
+function peerOpen(id){const opts={debug:0};return id?new Peer(id,opts):new Peer(opts);}
+function netHost(){
+  let alive=true,P=null,idTries=0;
   function setNet(s){net=s;if(alive)render();}
-  function open(){if(!alive)return;
-    try{P=S.host?new Peer(PREFIX+S.code,opts):new Peer(opts);}catch(e){setNet('error');return;}
-    P.on('open',()=>{setNet('online');if(!S.host)connect();});
+  function open(){if(!alive)return;try{P=peerOpen(PREFIX+S.code);}catch(e){setNet('error');return;}
+    P.on('open',()=>setNet('online'));
     P.on('disconnected',()=>{if(!alive)return;setNet('reconnecting');setTimeout(()=>{try{if(alive&&P&&!P.destroyed)P.reconnect();}catch(e){}},1500);});
     P.on('error',e=>{if(!alive)return;const t=e&&e.type;
       if(t==='unavailable-id'){try{P.destroy();}catch(_){}
-        if(S.host&&!S.oppPid&&!S.commits.length&&idTries<5){idTries++;S.code=genCode();save();setTimeout(open,200);render();}
-        else{setNet('reconnecting');setTimeout(open,4000);}return;}
-      if(t==='peer-unavailable'){lostHost=true;render();clearTimeout(retry);retry=setTimeout(connect,3000);return;}
+        if(!S.cfg.started&&!hub.peers.size&&idTries<5){idTries++;S.code=genCode();save();setTimeout(open,200);render();}else{setNet('reconnecting');setTimeout(open,4000);}return;}
       if(t==='browser-incompatible'){setNet('unsupported');return;}
-      setNet('reconnecting');});
-    if(S.host)P.on('connection',c=>{
-      c.on('data',d=>{if(!alive||!d||d.v!==2||d.app!=='bid')return;
-        if(c!==conn){
-          if(conn&&conn.open&&S.oppPid&&d.pid!==S.oppPid){try{c.send({v:2,app:'bid',full:true});}catch(_){}setTimeout(()=>{try{c.close();}catch(_){}},400);return;}
-          if(conn&&conn!==c){try{conn.close();}catch(_){}}
-          if(S.oppPid&&d.pid!==S.oppPid)S.oppPid=d.pid;
-          conn=c;SFX.join();if(last)c.send(last);}
-        onOpp(d);});
-      c.on('close',()=>{if(c===conn){conn=null;onOpp(null);}});c.on('error',()=>{});});
-  }
+      if(t!=='peer-unavailable')setNet('reconnecting');});
+    P.on('connection',c=>{let pid=null;
+      c.on('data',d=>{if(!alive||!d||d.v!==3||d.app!=='bid'||d.t!=='p')return;const q=cleanP(d.p);if(!q)return;pid=q.pid;
+        const ok=hubReceive(q,m=>{if(c.open)c.send(m);},c);
+        if(!ok){try{c.send({v:3,app:'bid',full:true});}catch(_){}setTimeout(()=>{try{c.close();}catch(_){}},400);}});
+      c.on('close',()=>{if(pid)hubOffline(pid,c);});c.on('error',()=>{});});}
+  open();
+  return{publish:broadcast,leave(){alive=false;try{P&&P.destroy();}catch(e){}}};
+}
+function netGuest(){
+  let alive=true,P=null,conn=null,retry=0;
+  function setNet(s){net=s;if(alive)render();}
+  function send(){if(conn&&conn.open){try{conn.send({v:3,app:'bid',t:'p',p:pres(S)});}catch(e){}}}
+  function open(){if(!alive)return;try{P=peerOpen(null);}catch(e){setNet('error');return;}
+    P.on('open',()=>{setNet('online');connect();});
+    P.on('disconnected',()=>{if(!alive)return;setNet('reconnecting');setTimeout(()=>{try{if(alive&&P&&!P.destroyed)P.reconnect();}catch(e){}},1500);});
+    P.on('error',e=>{if(!alive)return;const t=e&&e.type;
+      if(t==='peer-unavailable'){lostHost=true;render();clearTimeout(retry);retry=setTimeout(connect,3000);return;}
+      if(t==='browser-incompatible'){setNet('unsupported');return;}setNet('reconnecting');});}
   function connect(){if(!alive||!P||P.destroyed||P.disconnected)return;
     const c=P.connect(PREFIX+S.code,{reliable:true});
-    c.on('open',()=>{if(!alive)return;conn=c;lostHost=false;if(last)c.send(last);render();});
-    c.on('data',d=>{if(!alive||!d)return;if(d.full){roomFull=true;render();return;}if(d.v===2&&d.app==='bid')onOpp(d);});
-    c.on('close',()=>{if(c===conn){conn=null;onOpp(null);clearTimeout(retry);retry=setTimeout(connect,2000);}});c.on('error',()=>{});}
+    c.on('open',()=>{if(!alive)return;conn=c;lostHost=false;hostDown=false;send();render();});
+    c.on('data',d=>{if(!alive||!d||d.v!==3||d.app!=='bid')return;if(d.full){roomFull=true;render();return;}if(d.t==='snap')onSnap(d);});
+    c.on('close',()=>{if(c===conn){conn=null;hostDown=true;render();clearTimeout(retry);retry=setTimeout(connect,2000);}});c.on('error',()=>{});}
   open();
-  return{publish(p){last=p;if(conn&&conn.open){try{conn.send(p);}catch(e){}}},
-    leave(){alive=false;clearTimeout(retry);try{conn&&conn.close();}catch(e){}try{P&&P.destroy();}catch(e){}}};
+  return{publish:send,leave(){alive=false;clearTimeout(retry);try{conn&&conn.close();}catch(e){}try{P&&P.destroy();}catch(e){}}};
 }
 
-/* ---------- app ---------- */
-let S=null,O=null,T=null,bidVal=0,bidRound=-1,seenRounds=null,rvTimer=0,endShown=-1,endOpenAt=0,modalClosed=false,hadOpp=false,locking=false;
-function sanitizeOpp(o){if(!o||typeof o!=='object')return null;const c=JSON.parse(JSON.stringify(o));c.nick=(typeof c.nick==='string'?c.nick.slice(0,12):'')||'あいて';return c;}
-let lastO=null;
-function onOpp(o){O=sanitizeOpp(o);if(O)lastO=O;if(!S)return;const g0=S.game;let ch=step(S,O);
-  if(O){ensureVerify(O.commits,O.reveals);ensureVerify(S.commits,S.reveals);}
-  if(maybeRematch()){ch=true;step(S,O);}
-  if(S.game!==g0&&!S.host)resetView();
-  if(ch){save();T&&T.publish(pres(S));}render();}
-function onVerified(){if(S)render();}
-function commit(){step(S,O);maybeRematch();save();T&&T.publish(pres(S));render();}
-function save(){if(S&&S.mode==='online')ssSet('bid:save',S);}
-let toastT=0;function flash(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2400);}
+/* ---------- CPUs (they join the local hub like guests) ---------- */
+function botBid(d,pid){const me=d.st[pid],pts=me.pts,left=ROUNDS-d.cur;if(pts<=0)return 0;if(left===1)return pts;
+  const others=d.seats.filter(id=>id!==pid&&!isDropped(d.cfg,id,d.cur)).map(id=>d.st[id].pts),maxO=others.length?Math.max(...others):0;
+  let share=pts*d.pot/d.remain;const r=Math.random();
+  if(d.pot<=2&&r<.35)return Math.min(pts,Math.round(Math.random()*3));
+  if(d.pot>=5&&r>.7)share*=1.5;
+  share*=.65+Math.random()*.7;
+  if(maxO<share&&Math.random()<.6)share=Math.min(pts,maxO+1);
+  return Math.max(0,Math.min(pts,Math.round(share)));}
+function makeBot(i){
+  const B=newState({nick:BOTNAMES[i],host:false,mode:'bot'}),ctx={S:B,room:{players:[],cfg:null}};let busy=false,alive=true,last='';
+  function send(){const p=pres(B),j=JSON.stringify(p);if(j===last)return;last=j;
+    setTimeout(()=>{if(alive&&S&&S.host)hubReceive(p,snap=>setTimeout(()=>recv(snap),60),null);},80);}
+  function recv(snap){if(!alive)return;ctx.room.players=(snap.players||[]).map(cleanP).filter(Boolean);ctx.room.cfg=cleanCfg(snap.cfg);tick();}
+  function tick(){if(!alive)return;step(ctx);view(ctx).forEach(ensureVerify);
+    const cfg=ctx.room.cfg;
+    if(cfg&&cfg.started&&cfg.seats.includes(B.pid)){const d=derive(ctx);
+      if(d&&d.done)B.again=B.game;
+      else if(d&&!B.commits[d.cur]&&!busy&&!isDropped(cfg,B.pid,d.cur)){busy=true;const r0=d.cur;
+        setTimeout(async()=>{if(!alive)return;const d2=derive(ctx);if(!d2||d2.cur!==r0||B.commits[r0]){busy=false;return;}
+          const v=botBid(d2,B.pid),s=rid();B.mine[r0]={v,s};B.commits[r0]=await H(v,s);busy=false;step(ctx);send();},1000+Math.random()*2600);}}
+    send();}
+  const iv=setInterval(tick,500);send();
+  return{leave(){alive=false;clearInterval(iv);}};
+}
+
+/* ---------- lobby ---------- */
 function nickVal(){return $('#nick').value.trim().slice(0,12)||'プレイヤー';}
-function resetView(){$('#bidCard').dataset.sig='';bidRound=-1;seenRounds=null;endShown=-1;endOpenAt=0;modalClosed=false;hadOpp=false;clearTimeout(rvTimer);$('#rv').hidden=true;$('#end').hidden=true;}
 function hasNet(){return typeof window.Peer==='function';}
+function resetView(){$('#bidCard').dataset.sig='';bidRound=-1;seenRounds=null;endShown=-1;endOpenAt=0;modalClosed=false;clearTimeout(rvTimer);$('#rv').hidden=true;$('#end').hidden=true;}
+function clearRoom(){ROOM.players=[];ROOM.cfg=null;hubReset();roomFull=false;lostHost=false;hostDown=false;}
+let toastT=0;function flash(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2400);}
 
 function startOnline(st){
   if(!hasNet()){flash('通信の準備ができていません。ページを再読み込みしてください');return;}
-  S=st;O=null;roomFull=false;net='connecting';lostHost=false;resetView();save();
+  S=st;clearRoom();net='connecting';resetView();
   if(location.hash)history.replaceState(null,'',location.href.split('#')[0]);
-  T=netT();T.publish(pres(S));render();
-  clearTimeout(lookTimer);if(!S.host)lookTimer=setTimeout(()=>{if(S&&!S.cfg){lostHost=true;render();}},9000);
+  if(S.host){T=netHost();hostUpdate();}
+  else{T=netGuest();save();render();clearTimeout(lookTimer);lookTimer=setTimeout(()=>{if(S&&!ROOM.cfg){lostHost=true;render();}},9000);}
 }
-$('#create').onclick=()=>{lsSet('lab:nick',nickVal());startOnline(newState({nick:nickVal(),host:true,cfg:newCfg(0),mode:'online',code:genCode()}));};
+$('#create').onclick=()=>{lsSet('lab:nick',nickVal());startOnline(newState({nick:nickVal(),host:true,cfg:waitCfg(0),mode:'online',code:genCode()}));};
 $('#join').onclick=()=>{const c=$('#code').value.trim().toLowerCase();if(!/^[a-z0-9]{4}$/.test(c)){flash('部屋コードは4文字です');$('#code').focus();return;}
   lsSet('lab:nick',nickVal());startOnline(newState({nick:nickVal(),host:false,mode:'online',code:c}));};
 $('#code').addEventListener('keydown',e=>{if(e.key==='Enter')$('#join').click();});
-$('#cpu').onclick=()=>{lsSet('lab:nick',nickVal());S=newState({nick:nickVal(),host:true,cfg:newCfg(0),mode:'cpu'});O=null;resetView();T=cpuT();T.publish(pres(S));render();};
+$('#cpu').onclick=()=>{lsSet('lab:nick',nickVal());const k=Math.max(1,Math.min(3,+$('#cpuN').value||2));
+  S=newState({nick:nickVal(),host:true,cfg:waitCfg(0),mode:'cpu'});clearRoom();resetView();
+  bots=Array.from({length:k},(_,i)=>makeBot(i));T={publish:broadcast,leave(){bots.forEach(b=>b.leave());bots=[];}};hostUpdate();
+  const t0=Date.now();(function waitBots(){if(!S||S.mode!=='cpu'||S.cfg.started)return;
+    if(onlineCount()>=k+1||Date.now()-t0>3000){startGame(onlinePids());hostUpdate();}else setTimeout(waitBots,150);})();};
 $('#resume').onclick=()=>{const sv=ssGet('bid:save');if(sv)startOnline(sv);};
-function leave(){if(T)T.leave();T=null;S=null;O=null;lastO=null;$('#bidCard').dataset.sig='';ssSet('bid:save',null);clearTimeout(lookTimer);resetView();render();}
+function leave(){if(T)T.leave();T=null;S=null;clearRoom();ssSet('bid:save',null);clearTimeout(lookTimer);resetView();render();}
 $('#leave').onclick=leave;
 function syncMute(){const b=$('#mute');b.textContent=muted?'音：オフ':'音：オン';b.setAttribute('aria-pressed',String(muted));}
 $('#mute').onclick=()=>{muted=!muted;lsSet('bid:mute',muted?'1':'0');syncMute();};syncMute();
@@ -466,88 +535,125 @@ function copyText(text,okMsg,btn,label){
 
 /* ---------- bidding ---------- */
 async function lockBid(){
-  if(!S||!O||locking)return;const d=derive(S,O);if(d.done||S.commits[d.cur])return;
-  const v=Math.max(0,Math.min(d.me.pts,bidVal|0));locking=true;const s=rid(),r=d.cur;
-  const h=await H(v,s);locking=false;if(!S||S.commits[r]||derive(S,O).cur!==r)return;
-  S.mine[r]={v,s};S.commits[r]=h;SFX.lock();commit();
+  if(!S||locking)return;const d=derive(C);if(!d||d.done||S.commits[d.cur]||!d.cfg.seats.includes(S.pid))return;
+  const r=d.cur,v=Math.max(0,Math.min(d.st[S.pid].pts,bidVal|0)),s=rid();locking=true;
+  const h=await H(v,s);locking=false;const d2=derive(C);if(!S||S.commits[r]||!d2||d2.cur!==r)return;
+  S.mine[r]={v,s};S.commits[r]=h;SFX.lock();act();
 }
 function setBid(v,max){bidVal=Math.max(0,Math.min(max,Math.round(v)));}
 
 /* ---------- render ---------- */
 const GEM='<svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3l15 9v20l-15 9-15-9V12z" fill="#f2c14e" stroke="#b8892a" stroke-width="3" stroke-linejoin="round"/><path d="M22 3v38M7 12l30 20M37 12L7 32" stroke="#fff3c4" stroke-width="1.2" opacity=".55"/></svg>';
+function colorIdx(pid,cfg,ps){let i=cfg&&cfg.started?cfg.seats.indexOf(pid):-1;if(i<0)i=ps.findIndex(p=>p.pid===pid);return Math.max(0,i)%4;}
+function avatar(pid,nick,cfg,ps,extra){const c=COLORS[colorIdx(pid,cfg,ps)];return `<div class="avatar ${extra||''}" style="background:${c[0]};box-shadow:0 4px 0 ${c[1]};color:${c[2]}">${esc(initial(nick))}</div>`;}
+function nameOf(pid,by){return pid===S.pid?'あなた':((by[pid]&&by[pid].nick)||'だれか');}
+
 function render(){
   $('#lobby').hidden=!!S;$('#game').hidden=!S;
-  if(!S){$('#onlineNote').textContent=hasNet()?'アカウント登録はいりません。部屋をつくって招待リンクをDiscordに貼れば、友達はリンクを開くだけで入れます。':'通信の部品を読み込めませんでした。ネットにつながっているか確かめて、ページを再読み込みしてください。CPUとのれんしゅうはこのまま遊べます。';
-    $('#onlineNote').className='status'+(hasNet()?'':' warn');$('#resumeBox').hidden=!ssGet('bid:save');$('#end').hidden=true;$('#rv').hidden=true;return;}
-  if(O)hadOpp=true;
-  const d=S.cfg?derive(S,O||(lastO&&lastO.game===S.game?lastO:null)):null;
-  renderHud(d);renderInvite();
-  const showGame=!!(S.cfg&&O&&!roomFull);
-  $('#rail').hidden=!S.cfg;$('#playgrid').hidden=!S.cfg;
-  if(S.cfg)renderRail(d);
-  renderBid(d);renderHist(d);
-  if(d)handleReveal(d);
-  renderEnd(d);
+  if(!S){const ok=hasNet();$('#onlineNote').textContent=ok?'アカウント登録はいりません。部屋をつくって招待リンクをDiscordに貼れば、友達はリンクを開くだけで入れます。':'通信の部品を読み込めませんでした。ネットにつながっているか確かめて、ページを再読み込みしてください。CPUとのれんしゅうはこのまま遊べます。';
+    $('#onlineNote').className='status'+(ok?'':' warn');$('#resumeBox').hidden=!ssGet('bid:save');$('#end').hidden=true;$('#rv').hidden=true;return;}
+  const cfg=ctxCfg(C),ps=view(C),d=derive(C);
+  renderInfo(cfg,d);renderPlayers(cfg,ps,d);renderInvite(cfg,ps);renderWait(cfg,ps);
+  const started=!!(cfg&&cfg.started);$('#rail').hidden=!started;$('#playgrid').hidden=!started;
+  if(started){renderRail(d);renderBid(d,ps);renderHist(d);handleReveal(d);}
+  renderEnd(d,ps);
 }
-function renderHud(d){
-  const h=$('#hud');h.innerHTML='';
-  const nums=(x)=>x?`<span class="nums"><span class="st">★<b>${x.stars}</b></span><span><b>${x.pts}</b>コイン</span></span>`:'';
-  const me=mk('div','pcard'+(d&&d.me.stars>d.op.stars?' lead':''));
-  me.innerHTML=`<div class="avatar">${esc(initial(S.nick))}</div><div class="who"><span class="nm">${esc(S.nick)}</span>${nums(d&&d.me)}</div>`;
-  const op=mk('div','pcard right'+(d&&O&&d.op.stars>d.me.stars?' lead':''));
-  op.innerHTML=O?`<div class="avatar op">${esc(initial(O.nick))}</div><div class="who"><span class="nm">${esc(O.nick)}</span>${nums(d&&d.op)}</div>`
-    :`<div class="avatar off">?</div><div class="who"><span class="nm">待っています</span><span class="nums">${S.mode==='online'?(hadOpp?'接続が切れました':'招待リンクを送ってね'):'CPU準備中'}</span></div>`;
-  const mid=mk('div','mid');
+function renderInfo(cfg,d){
+  const el=$('#roominfo');el.innerHTML='';
   if(S.mode==='online'){const code=S.code.toUpperCase(),cb=mk('div','codebox');cb.title='部屋コード（タップでコピー）';
-    code.split('').forEach(c=>cb.appendChild(mk('span','t',c)));cb.onclick=()=>copyText(code,`コード ${code} をコピーしました`);mid.appendChild(cb);}
-  else mid.appendChild(mk('span','vs','VS'));
-  mid.appendChild(mk('span','meta',d?(d.done?'しあい終了':`ラウンド ${d.cur+1} / ${ROUNDS}`)+(S.game?`・${S.game+1}戦目`:''):''));
-  if(S.mode==='online'&&(net==='connecting'||net==='reconnecting'))mid.appendChild(mk('span','meta',net==='connecting'?'接続中…':'再接続中…'));
-  h.append(me,mid,op);
+    code.split('').forEach(c=>cb.appendChild(mk('span','t',c)));cb.onclick=()=>copyText(code,`コード ${code} をコピーしました`);el.appendChild(cb);}
+  else el.appendChild(mk('span','meta','CPUれんしゅう'));
+  const m=mk('span','meta');m.innerHTML=d?(d.done?'しあい終了':`ラウンド <b>${d.cur+1}</b> / ${ROUNDS}`):'メンバー集め中';el.appendChild(m);
+  if(S.mode==='online'&&(net==='connecting'||net==='reconnecting'))el.appendChild(mk('span','meta',net==='connecting'?'接続中…':'再接続中…'));
 }
-function renderInvite(){
+function renderPlayers(cfg,ps,d){
+  const el=$('#players');el.innerHTML='';const by=byId(ps);
+  let ids=d?d.seats.slice():ps.map(p=>p.pid);if(d)ps.forEach(p=>{if(!ids.includes(p.pid))ids.push(p.pid);});
+  ids=ids.slice(0,MAXP+2);el.style.setProperty('--n',Math.max(2,Math.min(4,ids.length)));
+  const lead=d?Math.max(...d.seats.map(id=>d.st[id].stars)):0;
+  ids.forEach(id=>{const p=by[id],seated=!!d&&d.seats.includes(id),on=p&&p.on!==false,me=id===S.pid;
+    let stt='',cls='';
+    if(!d)stt=p&&p.host?'部屋主':'参加中';
+    else if(!seated)stt='観戦中';
+    else if(isDropped(d.cfg,id,d.cur)){stt='抜けた';cls='bad';}
+    else if(!on){stt='接続が切れた';cls='bad';}
+    else if(d.done)stt='しあい終了';
+    else if(p&&p.game===d.cfg.game&&typeof p.commits[d.cur]==='string'){stt='入札ずみ';cls='ok';}
+    else stt='考え中…';
+    const chip=mk('div','pchip'+(me?' me':'')+(seated&&d&&lead>0&&d.st[id].stars===lead?' lead':''));
+    chip.innerHTML=avatar(id,p?p.nick:'?',cfg,ps,on?'':'off')+`<div class="who"><span class="nm">${esc(p?p.nick:'?')}${me?'<small>あなた</small>':''}</span>`+
+      (seated?`<span class="nums"><span class="st">★<b>${d.st[id].stars}</b></span><span><b>${d.st[id].pts}</b>コイン</span></span>`:'')+
+      `<span class="stt ${cls}">${stt}</span></div>`;
+    el.appendChild(chip);});
+}
+function renderInvite(cfg,ps){
   const ic=$('#inviteCard');
-  if(S.mode!=='online'||O||roomFull||!S.host){ic.hidden=true;return;}
-  ic.hidden=false;const code=S.code.toUpperCase();
-  ic.innerHTML=`<div><h2>友達を招待しよう</h2><p>招待リンクをDiscordに貼ってください。友達が入ったらすぐ第1ラウンドが始まります。</p>
+  if(S.mode!=='online'||!S.host||!cfg||cfg.started||ps.length>=MAXP){ic.hidden=true;return;}
+  ic.hidden=false;const code=S.code.toUpperCase(),sig=code+'|'+ps.length;if(ic.dataset.sig===sig)return;ic.dataset.sig=sig;
+  ic.innerHTML=`<div><h2>友達を招待しよう</h2><p>招待リンクをDiscordに貼ってください。最大4人まで入れます。そろったら下の「スタート」を押します。</p>
     <div class="codebox" title="タップでコピー">${code.split('').map(c=>`<span class="t">${c}</span>`).join('')}</div></div><div class="acts"></div>`;
   const acts=ic.querySelector('.acts');
   if(isWeb){const b1=mk('button','btn gold big','招待リンクをコピー');b1.onclick=()=>copyText(inviteUrl(code),'招待リンクをコピーしました。Discordに貼ってね',b1,'招待リンクをコピー');acts.appendChild(b1);}
   const b2=mk('button','btn','コードだけコピー');b2.onclick=()=>copyText(code,`コード ${code} をコピーしました`,b2,'コードだけコピー');acts.appendChild(b2);
   ic.querySelector('.codebox').onclick=()=>copyText(code,`コード ${code} をコピーしました`);
 }
-function renderRail(d){
-  const rail=$('#rail');rail.innerHTML='';const T=S.cfg.treasures;
-  for(let r=0;r<ROUNDS;r++){const res=d.rounds[r];let cls='slot',who='これから';
-    if(res){cls+=' done '+res.w;who=res.w==='me'?'あなた':res.w==='op'?(O?O.nick:'相手'):'持ち越し';}
-    else if(r===d.cur&&!d.done){cls+=' cur';who=d.carry?`今回 +${d.carry}`:'今回';}
-    const el=mk('div',cls);el.innerHTML=`<span class="rn">R${r+1}</span><span class="gem">${GEM}<b>${T[r]}</b></span><span class="who">${esc(who)}</span>`;rail.appendChild(el);}
+function renderWait(cfg,ps){
+  const w=$('#waitRoom');
+  if(roomFull){w.hidden=false;w.innerHTML='<div class="waitbox"><span class="big">この部屋は満員です</span><span class="muted">4人まで入れます。コードを確かめるか、新しく部屋をつくってください。</span></div>';return;}
+  if(S.mode==='online'&&net==='unsupported'){w.hidden=false;w.innerHTML='<div class="waitbox"><span class="big">このブラウザでは遊べません</span><span class="muted">Chrome か Safari の新しいバージョンで開いてください。</span></div>';return;}
+  if(!cfg){w.hidden=false;w.innerHTML=`<div class="waitbox"><div class="coinspin"></div><span class="big">部屋をさがしています…</span><span class="muted">${lostHost?'部屋が見つかりません。コードが合っているか、部屋をつくった人がページを開いたままか確かめてください。':'部屋 '+esc(S.code.toUpperCase())+' に接続中'}</span></div>`;return;}
+  if(cfg.started){w.hidden=true;return;}
+  w.hidden=false;const on=ps.filter(p=>p.on!==false),n=on.length;
+  let seats='';for(let i=0;i<MAXP;i++){const p=on[i];
+    seats+=p?`<div class="seat">${avatar(p.pid,p.nick,cfg,ps)}<span class="nm">${esc(p.nick)}${p.pid===S.pid?'（あなた）':''}</span></div>`
+      :`<div class="seat empty"><div class="avatar">？</div><span class="nm">あき</span></div>`;}
+  w.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h2>メンバー ${n} / ${MAXP}</h2><span class="muted" style="font-size:13px">2人からスタートできます</span></div><div class="members">${seats}</div><div id="startArea"></div>`;
+  const sa=w.querySelector('#startArea');
+  if(S.host){const b=mk('button','btn gold big',n>=2?`${n}人でスタート！`:'あと1人以上集まるとスタートできます');b.disabled=n<2;
+    b.onclick=()=>{if(onlineCount()<2)return;startGame(onlinePids());hostUpdate();};sa.appendChild(b);}
+  else sa.appendChild(mk('p','muted',hostDown?'部屋をつくった人の接続が切れました。再接続を待っています…':'部屋をつくった人が「スタート」を押すと始まります。'));
 }
-function renderBid(d){
-  const c=$('#bidCard');
-  const cur=d?d.cur:-1,oc=O&&O.game===S.game&&Array.isArray(O.commits)?O.commits:[];
-  const sig=JSON.stringify([roomFull,net==='unsupported',!!S.cfg,lostHost,!!O,hadOpp,S.game,d&&d.done,cur,d&&d.me.pts,d&&d.op.pts,d&&d.carry,
-    !!S.commits[cur],typeof oc[cur]==='string',O&&O.nick,S.code]);
+function renderRail(d){
+  const rail=$('#rail');rail.innerHTML='';const T=d.cfg.treasures;
+  for(let r=0;r<ROUNDS;r++){const res=d.rounds[r];let cls='slot',who='これから';
+    if(res){cls+=' done'+(res.winner?'':' tie');who=res.winner?nameOf(res.winner,d.by):'持ち越し';}
+    else if(r===d.cur&&!d.done){cls+=' cur';who=d.carry?`今回 +${d.carry}`:'今回';}
+    const el=mk('div',cls);el.innerHTML=`<span class="rn">R${r+1}</span><span class="gem">${GEM}<b>${T[r]}</b></span><span class="who">${esc(who)}</span>`;
+    if(res&&res.winner){const c=COLORS[colorIdx(res.winner,d.cfg,[])];el.querySelector('.who').style.cssText=`background:${c[0]};color:${c[2]}`;}
+    rail.appendChild(el);}
+}
+function renderBid(d,ps){
+  const c=$('#bidCard'),r=d.cur,cfg=d.cfg,seated=cfg.seats.includes(S.pid)&&!isDropped(cfg,S.pid,r);
+  const states=cfg.seats.filter(id=>id!==S.pid).map(id=>{const p=d.by[id];
+    const k=isDropped(cfg,id,r)?'drop':!(p&&p.on!==false)?'off':(p&&p.game===cfg.game&&typeof p.commits[r]==='string')?'lock':'think';return id+':'+k;});
+  const sig=JSON.stringify([S.game,d.done,r,d.st[S.pid]?d.st[S.pid].pts:-1,d.carry,!!S.commits[r],seated,states,hostDown,S.host]);
   if(c.dataset.sig===sig)return;c.dataset.sig=sig;c.innerHTML='';
-  if(roomFull){c.innerHTML='<div class="waitbox"><span class="big">この部屋は満員です</span><span class="muted">コードを確かめるか、新しく部屋をつくってください。</span></div>';return;}
-  if(S.mode==='online'&&net==='unsupported'){c.innerHTML='<div class="waitbox"><span class="big">このブラウザでは対戦できません</span><span class="muted">Chrome か Safari の新しいバージョンで開いてください。</span></div>';return;}
-  if(!S.cfg){c.innerHTML=`<div class="waitbox"><div class="coinspin"></div><span class="big">部屋をさがしています…</span><span class="muted">${lostHost?'部屋が見つかりません。コードが合っているか、部屋をつくった人がページを開いたままか確かめてください。':'部屋 '+esc(S.code.toUpperCase())+' に接続中'}</span></div>`;return;}
-  if(!O){c.innerHTML=`<div class="waitbox"><div class="coinspin"></div><span class="big">${hadOpp?'相手の接続が切れました':'相手を待っています'}</span><span class="muted">${hadOpp?'戻ってくるまでそのまま待ってください。':'入ってきたら第1ラウンドが始まります。'}</span></div>`;return;}
-  if(d.done){c.innerHTML=`<div class="waitbox"><span class="big">しあい終了！</span><span class="muted">★ ${d.me.stars} 対 ${d.op.stars}</span></div>`;return;}
-  const r=d.cur,max=d.me.pts,on=O.nick,oppLocked=Array.isArray(O.commits)&&typeof O.commits[r]==='string'&&O.game===S.game;
-  const pot=`<div class="potline"><span class="lbl">ラウンド ${r+1} のお宝</span><span class="pot">★${d.pot}${d.carry?`<small>（★${S.cfg.treasures[r]}＋持ち越し${d.carry}）</small>`:''}</span></div>`;
+  // host: someone dropped off mid-game
+  if(S.host&&!d.done){cfg.seats.forEach(id=>{const p=d.by[id];if(id===S.pid||isDropped(cfg,id,r)||(p&&p.on!==false))return;
+    const n=mk('div','notice');n.innerHTML=`<span>${esc(p?p.nick:'だれか')}さんの接続が切れました。戻ってくるのを待つか、抜かして続けられます。</span>`;
+    const b=mk('button','btn sm','抜かして続ける');b.onclick=()=>dropPlayer(id);n.appendChild(b);c.appendChild(n);});}
+  if(!S.host&&hostDown){const n=mk('div','notice');n.innerHTML='<span>部屋をつくった人の接続が切れました。再接続を待っています…</span>';c.appendChild(n);}
+  if(d.done){c.insertAdjacentHTML('beforeend',`<div class="waitbox"><span class="big">しあい終了！</span></div>`);return;}
+  const pot=`<div class="potline"><span class="lbl">ラウンド ${r+1} のお宝</span><span class="pot">★${d.pot}${d.carry?`<small>（★${cfg.treasures[r]}＋持ち越し${d.carry}）</small>`:''}</span></div>`;
+  const othersHtml=()=>'<div class="others">'+cfg.seats.filter(id=>id!==S.pid).map(id=>{const p=d.by[id],nm=esc(p?p.nick:'だれか');
+    if(isDropped(cfg,id,r))return `<span class="ostate off"><span class="d"></span>${nm}：抜けた</span>`;
+    if(!(p&&p.on!==false))return `<span class="ostate off"><span class="d"></span>${nm}：接続待ち</span>`;
+    if(p.game===cfg.game&&typeof p.commits[r]==='string')return `<span class="ostate locked"><span class="d"></span>${nm}：入札ずみ</span>`;
+    return `<span class="ostate"><span class="d"></span>${nm}：考え中（${d.st[id].pts}）</span>`;}).join('')+'</div>';
+  if(!seated){c.insertAdjacentHTML('beforeend',pot+`<div class="waitbox"><div class="coinspin"></div><span class="big">観戦中</span><span class="muted">${cfg.seats.includes(S.pid)?'このしあいからは抜けた扱いです。':'次のしあいから参加できます。'}</span></div>`+othersHtml());return;}
+  const max=d.st[S.pid].pts;
   if(S.commits[r]){const mine=S.mine[r]?S.mine[r].v:'?';
-    c.innerHTML=pot+`<div class="waitbox"><div class="coinspin"></div><span class="big">${oppLocked?'公開します…':`${esc(on)}さんの入札待ち`}</span><span class="muted">あなたの入札：<b style="color:var(--cream)">${mine}</b> コイン</span></div>`;return;}
-  if(bidRound!==r){bidRound=r;setBid(Math.min(max,Math.round(max*d.pot/d.remain)),max);}
+    const waiting=cfg.seats.filter(id=>id!==S.pid&&!isDropped(cfg,id,r)&&!(d.by[id]&&d.by[id].game===cfg.game&&typeof d.by[id].commits[r]==='string'));
+    c.insertAdjacentHTML('beforeend',pot+`<div class="waitbox"><div class="coinspin"></div><span class="big">${waiting.length?`あと${waiting.length}人の入札待ち`:'公開します…'}</span><span class="muted">あなたの入札：<b style="color:var(--cream)">${mine}</b> コイン</span></div>`+othersHtml());return;}
+  if(bidRound!==r){bidRound=r;setBid(Math.min(max,Math.round(max*d.pot/Math.max(1,d.remain))),max);}
   if(bidVal>max)bidVal=max;
-  c.innerHTML=pot+`<div class="dial"><span class="amt" id="amt">${bidVal}</span><span class="unit">コイン</span><span class="left">入札後のこり ${max-bidVal} コイン（いま ${max}）</span></div>
+  c.insertAdjacentHTML('beforeend',pot+`<div class="dial"><span class="amt" id="amt">${bidVal}</span><span class="unit">コイン</span><span class="left" id="leftc"></span></div>
     <input type="range" id="slider" min="0" max="${max}" step="1" value="${bidVal}" aria-label="入札するコイン">
     <div class="steppers"><button class="btn" data-d="-10">−10</button><button class="btn" data-d="-1">−1</button><button class="btn" data-d="1">+1</button><button class="btn" data-d="10">+10</button></div>
     <div class="chips"><button class="btn sm" data-q="0">0</button><button class="btn sm" data-q="0.25">¼</button><button class="btn sm" data-q="0.5">半分</button><button class="btn sm" data-q="1">ぜんぶ</button></div>
-    <button class="btn gold big" id="lock">${bidVal} コインで入札する</button>
-    <div class="oppstate${oppLocked?' locked':''}"><span class="d"></span><span>${oppLocked?`${esc(on)}さんはもう入札しました！`:`${esc(on)}さんは考え中…（のこり ${d.op.pts} コイン）`}</span></div>`;
+    <button class="btn gold big" id="lock"></button>`+othersHtml());
   const sl=$('#slider');const upd=()=>{$('#amt').textContent=bidVal;sl.value=bidVal;sl.style.setProperty('--p',(max?100*bidVal/max:0)+'%');
-    c.querySelector('.left').textContent=`入札後のこり ${max-bidVal} コイン（いま ${max}）`;$('#lock').textContent=`${bidVal} コインで入札する`;};
+    $('#leftc').textContent=`入札後のこり ${max-bidVal} コイン（いま ${max}）`;$('#lock').textContent=`${bidVal} コインで入札する`;};
   upd();
   sl.oninput=()=>{setBid(+sl.value,max);SFX.tick();upd();};
   c.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{setBid(bidVal+(+b.dataset.d),max);SFX.tick();upd();});
@@ -555,61 +661,66 @@ function renderBid(d){
   $('#lock').onclick=lockBid;
 }
 function renderHist(d){
-  const ul=$('#hist');ul.innerHTML='';const on=O?O.nick:'相手';
-  if(!d||!d.rounds.length){ul.appendChild(mk('li',null,'まだ公開されたラウンドはありません'));}
+  const ul=$('#hist');ul.innerHTML='';
+  if(!d.rounds.length)ul.appendChild(mk('li',null,'まだ公開されたラウンドはありません'));
   else d.rounds.slice().reverse().forEach(x=>{const li=mk('li');
-    li.innerHTML=`<span class="r">R${x.r+1}</span><span class="bids">★${x.pot}：<b class="m">${x.av}</b> 対 <b class="o">${x.bv}</b>${x.bad?' ⚠':''}</span>`+
-      `<span class="res ${x.w}">${x.w==='me'?'あなた獲得':x.w==='op'?esc(on)+'獲得':'持ち越し'}</span>`;ul.appendChild(li);});
-  $('#tip').textContent=d&&!d.done&&O?`のこりのお宝は★${d.remain}ぶん。相手ののこりは ${d.op.pts} コインです。`:'';
+    const bids=d.seats.map(id=>`${esc(nameOf(id,d.by))} <b>${isDropped(d.cfg,id,x.r)?'—':x.bids[id]}</b>${x.bad[id]?'⚠':''}`).join('・');
+    li.innerHTML=`<span class="r">R${x.r+1}</span><span class="res">★${x.pot} → ${x.winner?esc(nameOf(x.winner,d.by))+(x.winner===S.pid?'がゲット！':'さんがゲット'):'同額で持ち越し'}</span><span class="bids">${bids}</span>`;ul.appendChild(li);});
+  if(!d.done){const rich=d.seats.filter(id=>!isDropped(d.cfg,id,d.cur)).sort((a,b)=>d.st[b].pts-d.st[a].pts)[0];
+    $('#tip').textContent=`のこりのお宝は★${d.remain}ぶん。いちばんコインが多いのは${nameOf(rich,d.by)}${rich===S.pid?'':'さん'}（${d.st[rich].pts}）です。`;}
+  else $('#tip').textContent='';
 }
 function handleReveal(d){
   if(seenRounds==null){seenRounds=d.rounds.length;return;}
   if(d.rounds.length<=seenRounds)return;
-  const x=d.rounds[d.rounds.length-1];seenRounds=d.rounds.length;
-  const on=O?O.nick:'相手',rv=$('#rv');
-  rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}・お宝 ★${x.pot}</span>
-    <div class="cards"><div class="bcard me${x.w==='me'?' win':''}"><div class="in"><div class="b"></div><div class="f"><span class="w">あなた</span><span class="n">${x.av}</span></div></div></div>
-    <span class="vs">VS</span>
-    <div class="bcard op${x.w==='op'?' win':''}"><div class="in"><div class="b"></div><div class="f"><span class="w">${esc(on)}</span><span class="n">${x.bv}</span></div></div></div></div>
-    <div class="verdict ${x.w}">${x.w==='me'?`★${x.pot} ゲット！`:x.w==='op'?'取られた…':'同じ金額！'}</div>
-    <span class="sub">${x.w==='tie'?`★${x.pot} は次のラウンドに持ち越し`:x.w==='me'?`${x.av-x.bv} コイン差で勝ちました`:`${x.bv-x.av} コイン差で負けました`}${x.bad?'（⚠ 相手の入札が途中で変わった可能性があります）':''}</span>
-    <span class="sub" style="font-size:12px">タップで閉じる</span></div>`;
-  rv.hidden=false;SFX.flip();setTimeout(()=>{(x.w==='me'?SFX.coin:x.w==='op'?SFX.lose:SFX.tie)();},900);
-  clearTimeout(rvTimer);rvTimer=setTimeout(()=>{rv.hidden=true;render();},3200);
+  const x=d.rounds[d.rounds.length-1];seenRounds=d.rounds.length;const rv=$('#rv'),n=d.seats.length;
+  const cards=d.seats.map(id=>{const col=COLORS[colorIdx(id,d.cfg,[])][0],drop=isDropped(d.cfg,id,x.r);
+    const cls=x.winner===id?' win':(!x.winner&&x.top.includes(id)?' tie':'');
+    return `<div class="bcard${cls}" style="--pc:${col}"><div class="in"><div class="b"></div><div class="f"><span class="w">${esc(nameOf(id,d.by))}</span><span class="n">${drop?'—':x.bids[id]}</span></div></div></div>`;}).join('');
+  const mine=x.winner===S.pid,vcls=x.winner?(mine?'me':'op'):'tie';
+  const verdict=x.winner?(mine?`★${x.pot} ゲット！`:`${esc(nameOf(x.winner,d.by))}さんが★${x.pot} ゲット`):'同額で並んだ！';
+  const sub=x.winner?`${x.max} コインで落札`:`${x.max} コインで${x.top.length}人が並んだので、★${x.pot} は次のラウンドに持ち越し`;
+  const anyBad=Object.keys(x.bad).length?'（⚠ 入札が途中で変わった可能性がある人がいます）':'';
+  rv.innerHTML=`<div class="reveal"><span class="ttl">ラウンド ${x.r+1}・お宝 ★${x.pot}</span><div class="cards${n>2?' many':''}" style="--n:${n}">${cards}</div>
+    <div class="verdict ${vcls}">${verdict}</div><span class="sub">${sub}${anyBad}</span><span class="sub" style="font-size:12px">タップで閉じる</span></div>`;
+  rv.hidden=false;SFX.flip();setTimeout(()=>{(mine?SFX.coin:x.winner?SFX.lose:SFX.tie)();},900);
+  clearTimeout(rvTimer);rvTimer=setTimeout(()=>{rv.hidden=true;render();},3400);
   rv.onclick=()=>{clearTimeout(rvTimer);rv.hidden=true;render();};
-  if(d.done){endOpenAt=Date.now()+3300;}
+  if(d.done)endOpenAt=Date.now()+3500;
 }
 
 /* ---------- end & rematch ---------- */
-function wantAgain(){if(!S)return;S.again=S.game;commit();}
-function againBlock(){
-  const box=mk('div','stack'),on=O?O.nick:'相手',mine=S.again===S.game,theirs=!!(O&&O.again===S.game);
-  if(!O){box.appendChild(mk('p','againmsg',`${on}が部屋にいません。戻ってくるのを待つか、ロビーから新しく部屋をつくってください。`));return box;}
-  if(theirs&&!mine)box.appendChild(mk('p','againmsg hot',`${on}さんがもう一度やりたがっています！`));
-  const b=mk('button','btn gold big',mine?(theirs?'はじまります…':`${on}さんを待っています…`):'もう一度対戦する');b.disabled=mine;b.onclick=wantAgain;box.appendChild(b);
-  if(!mine)box.appendChild(mk('p','againmsg','2人とも押すと、同じ部屋で次の試合が始まります。お宝の順番は変わります。'));
+function wantAgain(){if(!S)return;S.again=S.game;act();}
+function againBlock(d,ps){
+  const box=mk('div','stack'),on=ps.filter(p=>p.on!==false),mine=S.again===S.game,others=on.filter(p=>p.pid!==S.pid);
+  if(!others.length){box.appendChild(mk('p','againmsg','ほかの人が部屋にいません。戻ってくるのを待つか、ロビーから新しく部屋をつくってください。'));return box;}
+  const wanting=others.filter(p=>p.again===S.game);
+  if(wanting.length&&!mine)box.appendChild(mk('p','againmsg hot',`${wanting.map(p=>p.nick).join('、')}さんがもう一度やりたがっています！`));
+  const seated=d.cfg.seats.includes(S.pid);
+  const b=mk('button','btn gold big',mine?'みんなを待っています…':(seated?'もう一度対戦する':'次のしあいに参加する'));b.disabled=mine;b.onclick=wantAgain;box.appendChild(b);
+  const list=mk('div','againlist');on.forEach(p=>{const ok=p.pid===S.pid?mine:p.again===S.game;list.appendChild(mk('span',ok?'ok':'',(p.pid===S.pid?'あなた':p.nick)+(ok?' ✓':' …')));});
+  box.appendChild(list);
+  box.appendChild(mk('p','againmsg','部屋にいる全員が押すと、同じ部屋で次のしあいが始まります。お宝の順番は変わります。'));
   return box;}
-function renderEnd(d){
+function ranks(d){const s=d.st;return d.seats.map(id=>({id,rank:1+d.seats.filter(x=>s[x].stars>s[id].stars||(s[x].stars===s[id].stars&&s[x].pts>s[id].pts)).length})).sort((a,b)=>a.rank-b.rank);}
+function renderEnd(d,ps){
   const end=$('#end'),bar=$('#againBar');
-  if(!d||!d.done||!O&&!hadOpp){end.hidden=true;bar.hidden=true;return;}
-  const res=d.me.stars>d.op.stars?'win':d.me.stars<d.op.stars?'lose':d.me.pts>d.op.pts?'win':d.me.pts<d.op.pts?'lose':'draw';
+  if(!d||!d.done){end.hidden=true;bar.hidden=true;return;}
+  const R=ranks(d),meR=R.find(x=>x.id===S.pid),ties=meR?R.filter(x=>x.rank===meR.rank).length:0;
+  const res=!meR?'draw':meR.rank===1?(ties>1?'draw':'win'):'lose';
+  const title=!meR?'しあい終了':meR.rank===1?(ties>1?'同率1位！':'優勝！'):`${meR.rank}位`;
   if(endShown!==S.game){endShown=S.game;modalClosed=false;if(endOpenAt<Date.now())endOpenAt=Date.now()+400;
-    const wait=endOpenAt-Date.now();setTimeout(()=>{if(!S)return;(res==='win'?SFX.win:res==='lose'?SFX.lose:SFX.tie)();if(res==='win')confetti();render();},Math.max(0,wait));}
+    setTimeout(()=>{if(!S)return;(res==='win'?SFX.win:res==='lose'?SFX.lose:SFX.tie)();if(res==='win')confetti();render();},Math.max(0,endOpenAt-Date.now()));}
   const show=Date.now()>=endOpenAt&&$('#rv').hidden;
   end.hidden=!show||modalClosed;bar.hidden=!show||!modalClosed;if(!show)return;
-  const on=O?O.nick:'相手',tieNote=d.me.stars===d.op.stars&&res!=='draw'?'<p class="againmsg">★が同じなので、残りコインで決まりました。</p>':'';
   const m=$('#endModal');
-  m.innerHTML=`<div class="big ${res}">${res==='win'?'勝利！':res==='lose'?'ざんねん…':'引き分け'}</div>
-    <div class="score"><div><span>あなた</span><b>★${d.me.stars}</b><span>のこり ${d.me.pts} コイン</span></div><div><span>${esc(on)}</span><b>★${d.op.stars}</b><span>のこり ${d.op.pts} コイン</span></div></div>${tieNote}`;
-  const st=againBlock();const v=mk('button','btn','きろくを見る');v.onclick=()=>{modalClosed=true;render();};st.appendChild(v);
+  m.innerHTML=`<div class="big ${res}">${title}</div><ol class="rank">${R.map(x=>{const p=d.by[x.id];
+    return `<li class="${x.id===S.pid?'me':''}"><span class="no">${x.rank}位</span>${avatar(x.id,p?p.nick:'?',d.cfg,ps)}<span class="nm">${esc(nameOf(x.id,d.by))}</span><span class="sc"><b>★${d.st[x.id].stars}</b><br>のこり${d.st[x.id].pts}</span></li>`;}).join('')}</ol>`;
+  const st=againBlock(d,ps);const v=mk('button','btn','きろくを見る');v.onclick=()=>{modalClosed=true;render();};st.appendChild(v);
   const l=mk('button','btn','ロビーに戻る');l.onclick=leave;st.appendChild(l);m.appendChild(st);
-  bar.innerHTML='';const head=mk('div','againhead');head.appendChild(mk('b',null,res==='win'?'勝利！':res==='lose'?'ざんねん…':'引き分け'));
-  const rb=mk('button','btn sm','結果を見る');rb.onclick=()=>{modalClosed=false;render();};head.appendChild(rb);bar.append(head,againBlock());
+  bar.innerHTML='';const head=mk('div','againhead');head.appendChild(mk('b',null,title));
+  const rb=mk('button','btn sm','結果を見る');rb.onclick=()=>{modalClosed=false;render();};head.appendChild(rb);bar.append(head,againBlock(d,ps));
 }
-function maybeRematch(){
-  if(!S||!S.host||!S.cfg||!O||O.game!==S.game||S.again!==S.game||O.again!==S.game)return false;
-  if(!derive(S,O).done)return false;
-  S.cfg=newCfg(S.game+1);S.game=S.cfg.game;freshGame(S);resetView();return true;}
 
 function confetti(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=$('#fx');c.hidden=false;const x=c.getContext('2d');
   const W=c.width=innerWidth,Hh=c.height=innerHeight,cols=['#f2c14e','#ffe7a0','#ff8a5b','#7fb7ff','#66e3a4'];
@@ -617,7 +728,7 @@ function confetti(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)re
   let f=0;(function loop(){x.clearRect(0,0,W,Hh);P.forEach(p=>{p.vy+=.08;p.x+=p.vx;p.y+=p.vy;p.a+=.1;x.save();x.translate(p.x,p.y);x.scale(Math.cos(p.a),1);x.fillStyle=p.c;x.beginPath();x.arc(0,0,p.r/2,0,Math.PI*2);x.fill();x.restore();});
     if(++f<200)requestAnimationFrame(loop);else{x.clearRect(0,0,W,Hh);c.hidden=true;}})();}
 
-window.addEventListener('beforeunload',e=>{if(S&&S.mode==='online'&&O&&S.cfg&&!derive(S,O).done&&S.commits.length){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload',e=>{if(!S||S.mode!=='online')return;const d=derive(C);if(d&&!d.done&&d.cfg.seats.includes(S.pid)){e.preventDefault();e.returnValue='';}});
 render();
 })();
 </script>
